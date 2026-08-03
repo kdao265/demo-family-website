@@ -1,0 +1,6 @@
+{
+  "name": "Love Family Heritage",
+  "description": "A family heritage website featuring member profiles, a historical timeline, and a photo gallery.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
