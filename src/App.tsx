@@ -11,6 +11,7 @@ import AdminLogin from './pages/admin/AdminLogin';
 import AdminDashboard from './pages/admin/AdminDashboard';
 import AdminGuard from './components/admin/AdminGuard';
 import Families from './pages/admin/Families';
+import Members from './pages/admin/Members';
 
 export default function App() {
   return (
@@ -42,7 +43,16 @@ export default function App() {
                   <Families />
                 </AdminGuard>
               }
-            />
+            
+
+              <Route
+                path="/admin/members"
+                element={
+                  <AdminGuard>
+                    <Members />
+                  </AdminGuard>
+                }
+              />
             
           </Routes>
         </main>
