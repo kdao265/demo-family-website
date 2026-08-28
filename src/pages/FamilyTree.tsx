@@ -52,45 +52,99 @@ export default function FamilyTree() {
   const [loading, setLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState('');
 
-  useEffect(() => {
-    async function loadFamilyTree() {
-      setLoading(true);
-      setErrorMessage('');
-
-      const [
-        membersResult,
-        relationshipsResult,
-        couplesResult,
-      ] = await Promise.all([
-        supabase
-          .from('family_members')
-          .select(
-            'id, family_id, full_name, birth_date, relation_title, short_bio, hobbies, avatar_url'
-          )
-          .order('created_at', { ascending: true }),
-      
-        supabase
-          .from('family_relationships')
-          .select('id, parent_id, child_id')
-          .order('created_at', { ascending: true }),
-      
-        supabase
-          .from('family_couples')
-          .select('id, person1_id, person2_id')
-          .order('created_at', { ascending: true }),
-      ]);
-        supabase
-          .from('family_members')
-          .select(
-            'id, family_id, full_name, birth_date, relation_title, short_bio, hobbies, avatar_url'
-          )
-          .order('created_at', { ascending: true }),
-
-        supabase
-          .from('family_relationships')
-          .select('id, parent_id, child_id')
-          .order('created_at', { ascending: true }),
-      ]);
+    useEffect(() => {
+      async function loadFamilyTree() {
+        setLoading(true);
+        setErrorMessage('');
+  
+        const [
+          membersResult,
+          relationshipsResult,
+          couplesResult,
+        ] = await Promise.all([
+          supabase
+            .from('family_members')
+            .select(
+              'id, family_id, full_name, birth_date, relation_title, short_bio, hobbies, avatar_url'
+            )
+            .order('created_at', { ascending: true }),
+  
+          supabase
+            .from('family_relationships')
+            .select('id, parent_id, child_id')
+            .order('created_at', { ascending: true }),
+  
+          supabase
+            .from('family_couples')
+            .select('id, person1_id, person2_id')
+            .order('created_at', { ascending: true }),
+        ]);
+  
+        if (membersResult.error) {
+          console.error(
+            'Load family members error:',
+            membersResult.error
+          );
+  
+          setErrorMessage(
+            'Không thể tải dữ liệu thành viên.'
+          );
+  
+          setLoading(false);
+          return;
+        }
+  
+        if (relationshipsResult.error) {
+          console.error(
+            'Load family relationships error:',
+            relationshipsResult.error
+          );
+  
+          setErrorMessage(
+            'Không thể tải dữ liệu gia phả.'
+          );
+  
+          setLoading(false);
+          return;
+        }
+  
+        if (couplesResult.error) {
+          console.error(
+            'Load family couples error:',
+            couplesResult.error
+          );
+  
+          setErrorMessage(
+            'Không thể tải quan hệ vợ chồng.'
+          );
+  
+          setLoading(false);
+          return;
+        }
+  
+        const mappedMembers: DisplayMember[] = (
+          membersResult.data ?? []
+        ).map((member: FamilyMember) => ({
+          id: member.id,
+          name: member.full_name,
+          birthDate: member.birth_date ?? 'Chưa cập nhật',
+          hobbies: member.hobbies ?? [],
+          imageUrl:
+            member.avatar_url ||
+            'https://images.unsplash.com/photo-1492562080023-ab3db95bfbce?auto=format&fit=crop&w=800&q=80',
+          imageAlt: member.full_name,
+          relation: member.relation_title ?? undefined,
+          shortBio: member.short_bio ?? undefined,
+        }));
+  
+        setMembers(mappedMembers);
+        setRelationships(relationshipsResult.data ?? []);
+        setCouples(couplesResult.data ?? []);
+        setLoading(false);
+      }
+  
+      loadFamilyTree();
+    }, []);
 
       if (membersResult.error) {
         console.error('Load family members error:', membersResult.error);
