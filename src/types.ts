@@ -5,6 +5,15 @@ export interface Member {
   hobbies: string[];
   imageUrl: string;
   imageAlt: string;
+
+  // Thông tin dùng cho gia phả
+  relation?: string;
+  shortBio?: string;
+}
+
+export interface FamilyRelationship {
+  parentId: string;
+  childId: string;
 }
 
 export interface GalleryItem {
