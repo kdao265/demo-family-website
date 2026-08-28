@@ -2,23 +2,28 @@
 @import url('https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@300;400;500;600;700&family=Playfair+Display:ital,wght@0,400;0,600;0,700;0,800;1,400&display=swap');
 
 @theme {
-  --color-primary: #b70011;
-  --color-primary-container: #dc2626;
-  --color-on-primary: #ffffff;
-  --color-on-primary-container: #fff6f5;
-  --color-secondary: #b6191a;
-  --color-secondary-container: #d9352f;
-  --color-on-secondary: #ffffff;
-  --color-on-secondary-container: #fffbff;
-  --color-surface: #fafaf9;
-  --color-surface-bright: #f8f9ff;
-  --color-on-surface: #121c2a;
-  --color-surface-variant: #d9e3f6;
-  --color-on-surface-variant: #5c403c;
-  --color-surface-container-lowest: #ffffff;
-  --color-surface-container-low: #eff4ff;
-  --color-surface-container-highest: #d9e3f6;
-  --color-outline: #916f6b;
+  --color-primary: #A84A3A;
+  --color-primary-container: #C66A58;
+  --color-on-primary: #FFFDF9;
+  --color-on-primary-container: #FFF8F4;
+
+  --color-secondary: #6B4A3A;
+  --color-secondary-container: #8A6755;
+  --color-on-secondary: #FFFDF9;
+  --color-on-secondary-container: #FFF8F4;
+
+  --color-surface: #FBF7F0;
+  --color-surface-bright: #FFFDF9;
+  --color-on-surface: #3D342F;
+
+  --color-surface-variant: #E9DED0;
+  --color-on-surface-variant: #6B5A50;
+
+  --color-surface-container-lowest: #FFFDF9;
+  --color-surface-container-low: #F3EBDD;
+  --color-surface-container-highest: #E7D8C8;
+
+  --color-outline: #A88F80;
 
   --font-display: "Playfair Display", serif;
   --font-headline: "Playfair Display", serif;
