@@ -1,26 +1,6 @@
-import { Heart } from 'lucide-react';
-import React, { useEffect, useMemo, useState } from 'react';
-import FamilyMemberCard from '../components/family/FamilyMemberCard';
-import { supabase } from '../lib/supabase';
+import FamilyMemberCard from './FamilyMemberCard';
 
-interface FamilyMember {
-  id: string;
-  family_id: string;
-  full_name: string;
-  birth_date: string | null;
-  relation_title: string | null;
-  short_bio: string | null;
-  hobbies: string[] | null;
-  avatar_url: string | null;
-}
-
-interface FamilyRelationship {
-  id: string;
-  parent_id: string;
-  child_id: string;
-}
-
-interface DisplayMember {
+interface Member {
   id: string;
   name: string;
   birthDate: string;
@@ -31,345 +11,71 @@ interface DisplayMember {
   shortBio?: string;
 }
 
-interface Generation {
-  level: number;
-  members: DisplayMember[];
+interface FamilyBranchProps {
+  parents: Member[];
+  children: Member[];
+  selectedMemberId: string | null;
+  onMemberClick: (memberId: string) => void;
 }
 
-export default function FamilyTree() {
-  const [members, setMembers] = useState<DisplayMember[]>([]);
-  const [relationships, setRelationships] = useState<
-    FamilyRelationship[]
-  >([]);
-
-  const [selectedMemberId, setSelectedMemberId] = useState<string | null>(
-    null
-  );
-
-  const [loading, setLoading] = useState(true);
-  const [errorMessage, setErrorMessage] = useState('');
-
-  useEffect(() => {
-    async function loadFamilyTree() {
-      setLoading(true);
-      setErrorMessage('');
-
-      const [membersResult, relationshipsResult] = await Promise.all([
-        supabase
-          .from('family_members')
-          .select(
-            'id, family_id, full_name, birth_date, relation_title, short_bio, hobbies, avatar_url'
-          )
-          .order('created_at', { ascending: true }),
-
-        supabase
-          .from('family_relationships')
-          .select('id, parent_id, child_id')
-          .order('created_at', { ascending: true }),
-      ]);
-
-      if (membersResult.error) {
-        console.error('Load family members error:', membersResult.error);
-        setErrorMessage('Không thể tải dữ liệu thành viên.');
-        setLoading(false);
-        return;
-      }
-
-      if (relationshipsResult.error) {
-        console.error(
-          'Load family relationships error:',
-          relationshipsResult.error
-        );
-        setErrorMessage('Không thể tải dữ liệu gia phả.');
-        setLoading(false);
-        return;
-      }
-
-      const mappedMembers: DisplayMember[] = (membersResult.data ?? []).map(
-        (member: FamilyMember) => ({
-          id: member.id,
-          name: member.full_name,
-          birthDate: member.birth_date ?? 'Chưa cập nhật',
-          hobbies: member.hobbies ?? [],
-          imageUrl:
-            member.avatar_url ||
-            'https://images.unsplash.com/photo-1492562080023-ab3db95bfbce?auto=format&fit=crop&w=800&q=80',
-          imageAlt: member.full_name,
-          relation: member.relation_title ?? undefined,
-          shortBio: member.short_bio ?? undefined,
-        })
-      );
-
-      setMembers(mappedMembers);
-      setRelationships(relationshipsResult.data ?? []);
-      setLoading(false);
-    }
-
-    loadFamilyTree();
-  }, []);
-
-  const selectedMember = useMemo(
-    () => members.find((member) => member.id === selectedMemberId) ?? null,
-    [members, selectedMemberId]
-  );
-
-  /*
-   * Tạo map:
-   * parent -> các con
-   */
-  const childrenMap = useMemo(() => {
-    const map = new Map<string, string[]>();
-
-    for (const relationship of relationships) {
-      const children = map.get(relationship.parent_id) ?? [];
-
-      if (!children.includes(relationship.child_id)) {
-        children.push(relationship.child_id);
-      }
-
-      map.set(relationship.parent_id, children);
-    }
-
-    return map;
-  }, [relationships]);
-
-  /*
-   * Tạo map:
-   * child -> các cha/mẹ
-   */
-  const parentMap = useMemo(() => {
-    const map = new Map<string, string[]>();
-
-    for (const relationship of relationships) {
-      const parents = map.get(relationship.child_id) ?? [];
-
-      if (!parents.includes(relationship.parent_id)) {
-        parents.push(relationship.parent_id);
-      }
-
-      map.set(relationship.child_id, parents);
-    }
-
-    return map;
-  }, [relationships]);
-
-  /*
-   * Xác định thế hệ của mỗi người.
-   *
-   * Người không có cha/mẹ trong dữ liệu:
-   * generation = 0
-   *
-   * Con:
-   * generation = generation của cha/mẹ + 1
-   */
-  const memberGenerationMap = useMemo(() => {
-    const generationMap = new Map<string, number>();
-
-    const visit = (
-      memberId: string,
-      generation: number,
-      path: Set<string>
-    ) => {
-      // Chặn vòng lặp dữ liệu
-      if (path.has(memberId)) {
-        return;
-      }
-
-      const currentGeneration = generationMap.get(memberId);
-
-      if (
-        currentGeneration === undefined ||
-        generation > currentGeneration
-      ) {
-        generationMap.set(memberId, generation);
-      }
-
-      const children = childrenMap.get(memberId) ?? [];
-
-      const nextPath = new Set(path);
-      nextPath.add(memberId);
-
-      for (const childId of children) {
-        visit(childId, generation + 1, nextPath);
-      }
-    };
-
-    const rootMembers = members.filter(
-      (member) => !parentMap.has(member.id)
-    );
-
-    for (const root of rootMembers) {
-      visit(root.id, 0, new Set());
-    }
-
-    /*
-     * Thành viên bị thiếu root do dữ liệu quan hệ bất thường:
-     * vẫn cho xuất hiện ở tầng cuối cùng.
-     */
-    for (const member of members) {
-      if (!generationMap.has(member.id)) {
-        generationMap.set(member.id, 0);
-      }
-    }
-
-    return generationMap;
-  }, [members, parentMap, childrenMap]);
-
-  /*
-   * Gom thành viên theo thế hệ.
-   */
-  const generations = useMemo<Generation[]>(() => {
-    const generationMap = new Map<number, DisplayMember[]>();
-
-    for (const member of members) {
-      const level = memberGenerationMap.get(member.id) ?? 0;
-
-      const generationMembers = generationMap.get(level) ?? [];
-      generationMembers.push(member);
-
-      generationMap.set(level, generationMembers);
-    }
-
-    return Array.from(generationMap.entries())
-      .sort(([a], [b]) => a - b)
-      .map(([level, generationMembers]) => ({
-        level,
-        members: generationMembers,
-      }));
-  }, [members, memberGenerationMap]);
-
-  function handleMemberClick(memberId: string) {
-    setSelectedMemberId((current) =>
-      current === memberId ? null : memberId
-    );
-  }
-
-  if (loading) {
-    return (
-      <div className="pt-[72px] min-h-screen bg-surface flex items-center justify-center">
-        <p className="font-body-md text-on-surface-variant">
-          Đang tải cây gia phả...
-        </p>
-      </div>
-    );
-  }
-
-  if (errorMessage) {
-    return (
-      <div className="pt-[72px] min-h-screen bg-surface flex items-center justify-center px-margin-mobile">
-        <div className="max-w-lg text-center">
-          <p className="font-body-lg text-primary">{errorMessage}</p>
-        </div>
-      </div>
-    );
-  }
-
+export default function FamilyBranch({
+  parents,
+  children,
+  selectedMemberId,
+  onMemberClick,
+}: FamilyBranchProps) {
   return (
-    <div className="pt-[72px] min-h-screen bg-surface">
-      {/* Page Header */}
-      <section className="py-16 px-margin-mobile md:px-margin-desktop bg-surface-container-low border-b border-outline/10">
-        <div className="max-w-4xl mx-auto text-center">
-          <span className="font-label-md text-primary uppercase tracking-[0.15em]">
-            Cội nguồn
-          </span>
+    <div className="flex flex-col items-center">
+      {/* Cha / mẹ */}
+      <div className="flex items-center justify-center gap-6">
+        {parents.map((parent, index) => (
+          <div key={parent.id} className="relative">
+            <FamilyMemberCard
+              member={parent}
+              isSelected={selectedMemberId === parent.id}
+              onClick={() => onMemberClick(parent.id)}
+            />
 
-          <h1 className="font-display-lg text-display-lg text-secondary mt-3 mb-5">
-            Gia Phả Gia Đình
-          </h1>
-
-          <div className="w-16 h-1 bg-primary/30 mx-auto rounded-full mb-6"></div>
-
-          <p className="font-body-lg text-on-surface-variant max-w-2xl mx-auto leading-relaxed">
-            Mỗi thế hệ là một phần của câu chuyện. Hãy cùng tìm về những
-            người đã tạo nên mái nhà này.
-          </p>
-        </div>
-      </section>
-
-      {/* Tree */}
-      <section className="py-section-gap px-margin-mobile md:px-margin-desktop overflow-x-auto">
-        <div className="max-w-7xl mx-auto min-w-[900px]">
-          <div className="text-center mb-12">
-            <span className="font-label-md text-primary uppercase tracking-[0.15em]">
-              Cây gia phả
-            </span>
-
-            <h2 className="font-headline-lg text-headline-lg text-secondary mt-3">
-              Các thế hệ
-            </h2>
-          </div>
-
-          {members.length === 0 ? (
-            <div className="text-center py-16 bg-surface-container-low rounded-3xl border border-outline/10">
-              <p className="font-body-lg text-on-surface-variant">
-                Chưa có dữ liệu gia phả.
-              </p>
-            </div>
-          ) : (
-            <div className="space-y-10">
-              {generations.map((generation, index) => (
-                <React.Fragment key={generation.level}>
-                  {index > 0 && (
-                    <div className="flex justify-center">
-                      <div className="w-px h-10 bg-primary/30"></div>
-                    </div>
-                  )}
-
-                  <div>
-                    <div className="text-center mb-5">
-                      <span className="font-label-md text-primary/70">
-                        Thế hệ {generation.level + 1}
-                      </span>
-                    </div>
-
-                    <div className="flex justify-center gap-10 flex-wrap">
-                      {generation.members.map((member) => (
-                        <FamilyMemberCard
-                          key={member.id}
-                          member={member}
-                          isSelected={selectedMemberId === member.id}
-                          onClick={() =>
-                            handleMemberClick(member.id)
-                          }
-                        />
-                      ))}
-                    </div>
-                  </div>
-                </React.Fragment>
-              ))}
-            </div>
-          )}
-
-          {/* Selected member */}
-          {selectedMember && (
-            <div className="max-w-2xl mx-auto mt-12 bg-surface-container-low rounded-3xl p-8 border border-outline/10">
-              <div className="text-center">
-                <Heart className="w-7 h-7 text-primary fill-current mx-auto mb-4" />
-
-                <h3 className="font-headline-md text-headline-md text-secondary mb-2">
-                  {selectedMember.name}
-                </h3>
-
-                <p className="font-body-md text-on-surface-variant">
-                  Sinh ngày {selectedMember.birthDate}
-                </p>
-
-                {selectedMember.relation && (
-                  <p className="font-body-md text-primary mt-2">
-                    {selectedMember.relation}
-                  </p>
-                )}
-
-                {selectedMember.shortBio && (
-                  <p className="font-body-md text-on-surface-variant mt-4 leading-relaxed">
-                    {selectedMember.shortBio}
-                  </p>
-                )}
+            {index < parents.length - 1 && (
+              <div className="absolute top-1/2 -right-5 -translate-y-1/2 text-primary text-xl">
+                ♥
               </div>
+            )}
+          </div>
+        ))}
+      </div>
+
+      {/* Đường nối xuống các con */}
+      {children.length > 0 && (
+        <>
+          <div className="w-px h-10 bg-primary/30" />
+
+          {children.length > 1 && (
+            <div className="relative w-full max-w-5xl h-6">
+              <div className="absolute left-1/2 top-0 w-1/2 border-t border-primary/30" />
+              <div className="absolute right-1/2 top-0 w-1/2 border-t border-primary/30" />
             </div>
           )}
-        </div>
-      </section>
+
+          {/* Các con */}
+          <div className="flex flex-wrap justify-center gap-10">
+            {children.map((child) => (
+              <div
+                key={child.id}
+                className="relative flex flex-col items-center"
+              >
+                <div className="w-px h-6 bg-primary/30" />
+
+                <FamilyMemberCard
+                  member={child}
+                  isSelected={selectedMemberId === child.id}
+                  onClick={() => onMemberClick(child.id)}
+                />
+              </div>
+            ))}
+          </div>
+        </>
+      )}
     </div>
   );
 }
