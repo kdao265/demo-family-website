@@ -7,6 +7,8 @@ import Story from './pages/Story';
 import Gallery from './pages/Gallery';
 import Guestbook from './pages/Guestbook';
 import FamilyTree from './pages/FamilyTree';
+import AdminLogin from './pages/admin/AdminLogin';
+import AdminDashboard from './pages/admin/AdminDashboard';
 
 export default function App() {
   return (
@@ -21,6 +23,8 @@ export default function App() {
             <Route path="/story" element={<Story />} />
             <Route path="/moments" element={<Gallery />} />
             <Route path="/guestbook" element={<Guestbook />} />
+            <Route path="/admin/login" element={<AdminLogin />} />
+            <Route path="/admin" element={<AdminDashboard />} />
           </Routes>
         </main>
 
