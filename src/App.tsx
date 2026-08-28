@@ -9,6 +9,7 @@ import Guestbook from './pages/Guestbook';
 import FamilyTree from './pages/FamilyTree';
 import AdminLogin from './pages/admin/AdminLogin';
 import AdminDashboard from './pages/admin/AdminDashboard';
+import AdminGuard from './components/admin/AdminGuard';
 
 export default function App() {
   return (
@@ -24,7 +25,14 @@ export default function App() {
             <Route path="/moments" element={<Gallery />} />
             <Route path="/guestbook" element={<Guestbook />} />
             <Route path="/admin/login" element={<AdminLogin />} />
-            <Route path="/admin" element={<AdminDashboard />} />
+            <Route
+              path="/admin"
+              element={
+                <AdminGuard>
+                  <AdminDashboard />
+                </AdminGuard>
+              }
+            />
           </Routes>
         </main>
 
