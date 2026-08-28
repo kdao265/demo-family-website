@@ -1,8 +1,7 @@
 import { Heart } from 'lucide-react';
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import FamilyMemberCard from '../components/family/FamilyMemberCard';
 import { members } from '../data';
-import { supabase } from '../lib/supabase';
 
 export default function FamilyTree() {
   const [selectedMemberId, setSelectedMemberId] = useState<string | null>(
