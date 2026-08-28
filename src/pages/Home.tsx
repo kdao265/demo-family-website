@@ -47,15 +47,15 @@ export default function Home() {
 
             <div className="flex flex-col sm:flex-row gap-4">
               <Link
-                to="/story"
+                to="/family-tree"
                 className="inline-flex items-center justify-center gap-2 bg-primary text-on-primary px-7 py-3.5 rounded-full font-label-md shadow-lg hover:bg-primary-container hover:-translate-y-0.5 transition-all duration-200"
               >
-                Khám phá gia đình
+                Khám phá gia phả
                 <ArrowRight className="w-4 h-4" />
               </Link>
 
               <Link
-                to="/gallery"
+                to="/moments"
                 className="inline-flex items-center justify-center gap-2 bg-on-primary/10 backdrop-blur-sm border border-on-primary/60 text-on-primary px-7 py-3.5 rounded-full font-label-md hover:bg-on-primary/20 transition-all duration-200"
               >
                 Xem những khoảnh khắc
@@ -307,7 +307,7 @@ export default function Home() {
             </div>
 
             <Link
-              to="/gallery"
+              to="/moments"
               className="inline-flex items-center gap-2 text-primary font-label-md hover:gap-3 transition-all"
             >
               Xem tất cả
@@ -324,7 +324,7 @@ export default function Home() {
 
               return (
                 <Link
-                  to="/gallery"
+                  to="/moments"
                   key={photo.id}
                   className={`group relative rounded-2xl overflow-hidden ${layoutClass}`}
                 >
