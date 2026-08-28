@@ -68,12 +68,12 @@ export default function FamilyTree() {
               'id, family_id, full_name, birth_date, relation_title, short_bio, hobbies, avatar_url'
             )
             .order('created_at', { ascending: true }),
-  
+        
           supabase
             .from('family_relationships')
             .select('id, parent_id, child_id')
             .order('created_at', { ascending: true }),
-  
+        
           supabase
             .from('family_couples')
             .select('id, person1_id, person2_id')
