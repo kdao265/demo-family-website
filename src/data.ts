@@ -1,16 +1,6 @@
 import {
   AnniversaryPhoto,
   CoreValue,
-  GalleryItem,
-  GuestbookMessage,
-  Member,
-  TimelineEvent,
-  TimelineSnippetEvent,
-} from './types';
-
-import {
-  AnniversaryPhoto,
-  CoreValue,
   FamilyRelationship,
   GalleryItem,
   GuestbookMessage,
