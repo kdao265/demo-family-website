@@ -167,6 +167,6 @@ body {
   transition: transform 0.3s ease, box-shadow 0.3s ease;
 }
 .hover-lift:hover {
-  transform: scale(1.02);
+  transform: translateY(-4px);
   box-shadow: 0px 10px 30px rgba(0,0,0,0.08);
 }
