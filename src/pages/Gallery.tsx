@@ -7,9 +7,12 @@ export default function Gallery() {
     <div className="pt-[72px] bg-surface-container-lowest min-h-screen">
       {/* Header Section */}
       <section className="py-12 px-margin-mobile md:px-margin-desktop text-center border-b border-outline/10 bg-surface">
-        <h1 className="font-display-lg text-display-lg text-secondary mb-4 animate-fade-in-up">Kỷ Niệm 40 Năm</h1>
-        <p className="font-body-lg text-body-lg text-on-surface-variant max-w-2xl mx-auto mb-8 animate-fade-in-up" style={{ animationDelay: '0.1s' }}>
-          Những khoảnh khắc vô giá được ghi lại trong suốt hành trình 40 năm gắn bó.
+        <h1 className="font-display-lg text-display-lg text-secondary mb-4 animate-fade-in-up">
+          Khoảnh Khắc
+        </h1>
+        <p className="font-body-lg text-body-lg text-on-surface-variant max-w-2xl mx-auto mb-8 animate-fade-in-up">
+          Những khoảnh khắc được lưu giữ qua năm tháng, từ những ngày bình thường
+          đến những dịp đặc biệt của gia đình.
         </p>
         
         {/* Filters & Search */}
