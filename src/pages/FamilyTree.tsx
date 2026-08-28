@@ -16,7 +16,13 @@ export default function FamilyTree() {
         .select('*');
   
       console.log('SUPABASE DATA:', data);
-      console.log('SUPABASE ERROR:', error);
+
+      if (error) {
+        console.error('SUPABASE ERROR MESSAGE:', error.message);
+        console.error('SUPABASE ERROR DETAILS:', error.details);
+        console.error('SUPABASE ERROR HINT:', error.hint);
+        console.error('SUPABASE ERROR CODE:', error.code);
+      }
     }
   
     testSupabase();
