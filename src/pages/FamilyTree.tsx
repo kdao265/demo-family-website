@@ -52,102 +52,36 @@ export default function FamilyTree() {
   const [loading, setLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState('');
 
-    useEffect(() => {
-      async function loadFamilyTree() {
-        setLoading(true);
-        setErrorMessage('');
-  
-        const [
-          membersResult,
-          relationshipsResult,
-          couplesResult,
-        ] = await Promise.all([
+  useEffect(() => {
+    async function loadFamilyTree() {
+      setLoading(true);
+      setErrorMessage('');
+
+      const [membersResult, relationshipsResult, couplesResult] =
+        await Promise.all([
           supabase
             .from('family_members')
             .select(
               'id, family_id, full_name, birth_date, relation_title, short_bio, hobbies, avatar_url'
             )
             .order('created_at', { ascending: true }),
-        
+
           supabase
             .from('family_relationships')
             .select('id, parent_id, child_id')
             .order('created_at', { ascending: true }),
-        
+
           supabase
             .from('family_couples')
             .select('id, person1_id, person2_id')
             .order('created_at', { ascending: true }),
         ]);
-  
-        if (membersResult.error) {
-          console.error(
-            'Load family members error:',
-            membersResult.error
-          );
-  
-          setErrorMessage(
-            'Không thể tải dữ liệu thành viên.'
-          );
-  
-          setLoading(false);
-          return;
-        }
-  
-        if (relationshipsResult.error) {
-          console.error(
-            'Load family relationships error:',
-            relationshipsResult.error
-          );
-  
-          setErrorMessage(
-            'Không thể tải dữ liệu gia phả.'
-          );
-  
-          setLoading(false);
-          return;
-        }
-  
-        if (couplesResult.error) {
-          console.error(
-            'Load family couples error:',
-            couplesResult.error
-          );
-  
-          setErrorMessage(
-            'Không thể tải quan hệ vợ chồng.'
-          );
-  
-          setLoading(false);
-          return;
-        }
-  
-        const mappedMembers: DisplayMember[] = (
-          membersResult.data ?? []
-        ).map((member: FamilyMember) => ({
-          id: member.id,
-          name: member.full_name,
-          birthDate: member.birth_date ?? 'Chưa cập nhật',
-          hobbies: member.hobbies ?? [],
-          imageUrl:
-            member.avatar_url ||
-            'https://images.unsplash.com/photo-1492562080023-ab3db95bfbce?auto=format&fit=crop&w=800&q=80',
-          imageAlt: member.full_name,
-          relation: member.relation_title ?? undefined,
-          shortBio: member.short_bio ?? undefined,
-        }));
-  
-        setMembers(mappedMembers);
-        setRelationships(relationshipsResult.data ?? []);
-        setCouples(couplesResult.data ?? []);
-        setLoading(false);
-      }
-  
-      loadFamilyTree();
-    }, []);
 
       if (membersResult.error) {
-        console.error('Load family members error:', membersResult.error);
+        console.error(
+          'Load family members error:',
+          membersResult.error
+        );
         setErrorMessage('Không thể tải dữ liệu thành viên.');
         setLoading(false);
         return;
@@ -168,29 +102,25 @@ export default function FamilyTree() {
           'Load family couples error:',
           couplesResult.error
         );
-      
-        setErrorMessage(
-          'Không thể tải quan hệ vợ chồng.'
-        );
-      
+        setErrorMessage('Không thể tải quan hệ vợ chồng.');
         setLoading(false);
         return;
       }
 
-      const mappedMembers: DisplayMember[] = (membersResult.data ?? []).map(
-        (member: FamilyMember) => ({
-          id: member.id,
-          name: member.full_name,
-          birthDate: member.birth_date ?? 'Chưa cập nhật',
-          hobbies: member.hobbies ?? [],
-          imageUrl:
-            member.avatar_url ||
-            'https://images.unsplash.com/photo-1492562080023-ab3db95bfbce?auto=format&fit=crop&w=800&q=80',
-          imageAlt: member.full_name,
-          relation: member.relation_title ?? undefined,
-          shortBio: member.short_bio ?? undefined,
-        })
-      );
+      const mappedMembers: DisplayMember[] = (
+        membersResult.data ?? []
+      ).map((member: FamilyMember) => ({
+        id: member.id,
+        name: member.full_name,
+        birthDate: member.birth_date ?? 'Chưa cập nhật',
+        hobbies: member.hobbies ?? [],
+        imageUrl:
+          member.avatar_url ||
+          'https://images.unsplash.com/photo-1492562080023-ab3db95bfbce?auto=format&fit=crop&w=800&q=80',
+        imageAlt: member.full_name,
+        relation: member.relation_title ?? undefined,
+        shortBio: member.short_bio ?? undefined,
+      }));
 
       setMembers(mappedMembers);
       setRelationships(relationshipsResult.data ?? []);
@@ -202,14 +132,11 @@ export default function FamilyTree() {
   }, []);
 
   const selectedMember = useMemo(
-    () => members.find((member) => member.id === selectedMemberId) ?? null,
+    () =>
+      members.find((member) => member.id === selectedMemberId) ?? null,
     [members, selectedMemberId]
   );
 
-  /*
-   * Tạo map:
-   * parent -> các con
-   */
   const childrenMap = useMemo(() => {
     const map = new Map<string, string[]>();
 
@@ -226,10 +153,6 @@ export default function FamilyTree() {
     return map;
   }, [relationships]);
 
-  /*
-   * Tạo map:
-   * child -> các cha/mẹ
-   */
   const parentMap = useMemo(() => {
     const map = new Map<string, string[]>();
 
@@ -248,32 +171,28 @@ export default function FamilyTree() {
 
   const spouseMap = useMemo(() => {
     const map = new Map<string, DisplayMember[]>();
-  
+
     const memberMap = new Map(
       members.map((member) => [member.id, member])
     );
-  
+
     for (const couple of couples) {
       const person1 = memberMap.get(couple.person1_id);
       const person2 = memberMap.get(couple.person2_id);
-  
+
       if (!person1 || !person2) {
         continue;
       }
-  
-      const person1Spouses =
-        map.get(person1.id) ?? [];
-  
+
+      const person1Spouses = map.get(person1.id) ?? [];
       person1Spouses.push(person2);
       map.set(person1.id, person1Spouses);
-  
-      const person2Spouses =
-        map.get(person2.id) ?? [];
-  
+
+      const person2Spouses = map.get(person2.id) ?? [];
       person2Spouses.push(person1);
       map.set(person2.id, person2Spouses);
     }
-  
+
     return map;
   }, [members, couples]);
 
@@ -305,7 +224,6 @@ export default function FamilyTree() {
 
   return (
     <div className="pt-[72px] min-h-screen bg-surface">
-      {/* Page Header */}
       <section className="py-16 px-margin-mobile md:px-margin-desktop bg-surface-container-low border-b border-outline/10">
         <div className="max-w-4xl mx-auto text-center">
           <span className="font-label-md text-primary uppercase tracking-[0.15em]">
@@ -316,7 +234,7 @@ export default function FamilyTree() {
             Gia Phả Gia Đình
           </h1>
 
-          <div className="w-16 h-1 bg-primary/30 mx-auto rounded-full mb-6"></div>
+          <div className="w-16 h-1 bg-primary/30 mx-auto rounded-full mb-6" />
 
           <p className="font-body-lg text-on-surface-variant max-w-2xl mx-auto leading-relaxed">
             Mỗi thế hệ là một phần của câu chuyện. Hãy cùng tìm về những
@@ -325,7 +243,6 @@ export default function FamilyTree() {
         </div>
       </section>
 
-      {/* Tree */}
       <section className="py-section-gap px-margin-mobile md:px-margin-desktop overflow-x-auto">
         <div className="max-w-7xl mx-auto min-w-[900px]">
           <div className="text-center mb-12">
@@ -350,34 +267,25 @@ export default function FamilyTree() {
                 const memberMap = new Map(
                   members.map((member) => [member.id, member])
                 );
-              
-                /*
-                 * Những người không có cha/mẹ trong dữ liệu
-                 * được xem là thế hệ gốc.
-                 */
+
                 const rootMembers = members.filter(
                   (member) => !parentMap.has(member.id)
                 );
-              
-                /*
-                 * Nếu hai người trong một cặp đều là root,
-                 * hiển thị họ thành một gia đình nhỏ.
-                 */
+
                 const rootCouples = couples
                   .map((couple) => {
                     const person1 = memberMap.get(couple.person1_id);
                     const person2 = memberMap.get(couple.person2_id);
-              
+
                     if (!person1 || !person2) {
                       return null;
                     }
-              
-                    return [person1, person2];
+
+                    return [person1, person2] as DisplayMember[];
                   })
                   .filter(
                     (couple): couple is DisplayMember[] =>
                       couple !== null &&
-                      couple.length === 2 &&
                       rootMembers.some(
                         (member) => member.id === couple[0].id
                       ) &&
@@ -385,42 +293,38 @@ export default function FamilyTree() {
                         (member) => member.id === couple[1].id
                       )
                   );
-              
+
                 const usedRootIds = new Set<string>();
-              
+
                 for (const couple of rootCouples) {
                   usedRootIds.add(couple[0].id);
                   usedRootIds.add(couple[1].id);
                 }
-              
-                /*
-                 * Các root không thuộc cặp nào.
-                 */
+
                 const singleRoots = rootMembers.filter(
                   (member) => !usedRootIds.has(member.id)
                 );
-              
+
                 return (
-                  <div className="space-y-16">
-                    {/* Gia đình gốc */}
+                  <>
                     {rootCouples.map((couple, index) => {
                       const childIds = new Set<string>();
-              
+
                       for (const parent of couple) {
                         const ids = childrenMap.get(parent.id) ?? [];
-              
+
                         for (const childId of ids) {
                           childIds.add(childId);
                         }
                       }
-              
+
                       const children = Array.from(childIds)
                         .map((id) => memberMap.get(id))
                         .filter(Boolean) as DisplayMember[];
-              
+
                       return (
                         <FamilyTreeBranch
-                          key={`root-couple-${index}`}
+                          key={`couple-${index}`}
                           parents={couple}
                           children={children}
                           allMembers={members}
@@ -428,19 +332,23 @@ export default function FamilyTree() {
                           spouseMap={spouseMap}
                           selectedMemberId={selectedMemberId}
                           onMemberClick={handleMemberClick}
-                          renderedIds={new Set(couple.map((member) => member.id))}
+                          renderedIds={
+                            new Set(
+                              couple.map((member) => member.id)
+                            )
+                          }
                         />
                       );
                     })}
-              
-                    {/* Người gốc không có vợ/chồng */}
+
                     {singleRoots.map((root) => {
-                      const childIds = childrenMap.get(root.id) ?? [];
-              
+                      const childIds =
+                        childrenMap.get(root.id) ?? [];
+
                       const children = childIds
                         .map((id) => memberMap.get(id))
                         .filter(Boolean) as DisplayMember[];
-              
+
                       return (
                         <FamilyTreeBranch
                           key={`root-${root.id}`}
@@ -455,13 +363,12 @@ export default function FamilyTree() {
                         />
                       );
                     })}
-                  </div>
+                  </>
                 );
               })()}
             </div>
           )}
 
-          {/* Selected member */}
           {selectedMember && (
             <div className="max-w-2xl mx-auto mt-12 bg-surface-container-low rounded-3xl p-8 border border-outline/10">
               <div className="text-center">
