@@ -218,28 +218,73 @@ export default function FamilyTree() {
             </div>
           ) : (
             <div className="space-y-16">
-              {members
-                .filter((member) => !parentMap.has(member.id))
-                .map((rootMember) => {
-                  const childIds = childrenMap.get(rootMember.id) ?? [];
+              {(() => {
+                const memberMap = new Map(
+                  members.map((member) => [member.id, member])
+                );
+              
+                const roots = members.filter(
+                  (member) => !parentMap.has(member.id)
+                );
+              
+                const groupedRoots = new Map<
+                  string,
+                  {
+                    parents: DisplayMember[];
+                    children: DisplayMember[];
+                  }
+                >();
+              
+                for (const root of roots) {
+                  const childIds = childrenMap.get(root.id) ?? [];
+              
+                  const childKey = childIds
+                    .slice()
+                    .sort()
+                    .join('|');
+              
+                  /*
+                   * Những người có cùng tập con
+                   * được coi là cùng một cặp/gia đình gốc.
+                   */
+                  const key =
+                    childKey.length > 0
+                      ? `children-${childKey}`
+                      : `single-${root.id}`;
               
                   const rootChildren = childIds
-                    .map((id) => members.find((member) => member.id === id))
-                    .filter(Boolean);
+                    .map((id) => memberMap.get(id))
+                    .filter(Boolean) as DisplayMember[];
               
-                  return (
-                    <FamilyTreeBranch
-                      key={rootMember.id}
-                      member={rootMember}
-                      children={rootChildren}
-                      allMembers={members}
-                      childrenMap={childrenMap}
-                      selectedMemberId={selectedMemberId}
-                      onMemberClick={handleMemberClick}
-                      renderedIds={new Set([rootMember.id])}
-                    />
-                  );
-                })}
+                  const existing = groupedRoots.get(key);
+              
+                  if (existing) {
+                    existing.parents.push(root);
+                  } else {
+                    groupedRoots.set(key, {
+                      parents: [root],
+                      children: rootChildren,
+                    });
+                  }
+                }
+              
+                return Array.from(groupedRoots.values()).map((group, index) => (
+                  <FamilyTreeBranch
+                    key={`root-branch-${index}`}
+                    parents={group.parents}
+                    children={group.children}
+                    allMembers={members}
+                    childrenMap={childrenMap}
+                    selectedMemberId={selectedMemberId}
+                    onMemberClick={handleMemberClick}
+                    renderedIds={
+                      new Set([
+                        ...group.parents.map((member) => member.id),
+                      ])
+                    }
+                  />
+                ));
+              })()}
             </div>
           )}
 
