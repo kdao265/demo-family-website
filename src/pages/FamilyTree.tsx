@@ -336,24 +336,28 @@ export default function FamilyTree() {
             </div>
           ) : (
             <div className="space-y-16">
-              {rootBranches.map((branch, index) => (
-                <FamilyTreeBranch
-                  key={`root-branch-${index}`}
-                  parents={branch.parents}
-                  children={branch.children}
-                  allMembers={members}
-                  parentMap={parentMap}
-                  childrenMap={childrenMap}
-                  selectedMemberId={selectedMemberId}
-                  onMemberClick={handleMemberClick}
-                  renderedIds={
-                    new Set([
-                      ...branch.parents.map((member) => member.id),
-                      ...branch.children.map((member) => member.id),
-                    ])
-                  }
-                />
-              ))}
+              {members
+                .filter((member) => !parentMap.has(member.id))
+                .map((rootMember) => {
+                  const childIds = childrenMap.get(rootMember.id) ?? [];
+              
+                  const rootChildren = childIds
+                    .map((id) => members.find((member) => member.id === id))
+                    .filter(Boolean);
+              
+                  return (
+                    <FamilyTreeBranch
+                      key={rootMember.id}
+                      member={rootMember}
+                      children={rootChildren}
+                      allMembers={members}
+                      childrenMap={childrenMap}
+                      selectedMemberId={selectedMemberId}
+                      onMemberClick={handleMemberClick}
+                      renderedIds={new Set([rootMember.id])}
+                    />
+                  );
+                })}
             </div>
           )}
 
