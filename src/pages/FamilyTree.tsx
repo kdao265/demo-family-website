@@ -1,7 +1,7 @@
 import { Heart } from 'lucide-react';
 import React, { useEffect, useMemo, useState } from 'react';
 import FamilyMemberCard from '../components/family/FamilyMemberCard';
-import FamilyBranch from '../components/family/FamilyBranch';
+import FamilyTreeBranch from '../components/family/FamilyTreeBranch';
 import { supabase } from '../lib/supabase';
 
 interface FamilyMember {
@@ -211,67 +211,61 @@ export default function FamilyTree() {
     return generationMap;
   }, [members, parentMap, childrenMap]);
 
-  interface FamilyBranchData {
-    id: string;
-    parents: DisplayMember[];
-    children: DisplayMember[];
-    generation: number;
-  }
-  
-  const branches = useMemo<FamilyBranchData[]>(() => {
+  const rootBranches = useMemo(() => {
     const memberMap = new Map(
       members.map((member) => [member.id, member])
     );
   
-    const grouped = new Map<string, FamilyBranchData>();
+    const roots = members.filter(
+      (member) => !parentMap.has(member.id)
+    );
   
-    for (const child of members) {
-      const parents = parentMap.get(child.id) ?? [];
-  
-      if (parents.length === 0) {
-        continue;
+    const groups = new Map<
+      string,
+      {
+        parents: DisplayMember[];
+        children: DisplayMember[];
       }
+    >();
   
-      const validParents = parents
-        .map((parentId) => memberMap.get(parentId))
+    for (const root of roots) {
+      const children = (childrenMap.get(root.id) ?? [])
+        .map((id) => memberMap.get(id))
         .filter(Boolean) as DisplayMember[];
   
-      if (validParents.length === 0) {
+      /*
+       * Người không có con vẫn được hiển thị riêng.
+       */
+      if (children.length === 0) {
+        groups.set(`single-${root.id}`, {
+          parents: [root],
+          children: [],
+        });
+  
         continue;
       }
   
-      /*
-       * Những người có cùng tập cha/mẹ
-       * sẽ được gom vào cùng một nhánh.
-       */
-      const parentKey = [...parents].sort().join('|');
+      const childKey = children
+        .map((child) => child.id)
+        .sort()
+        .join('|');
   
-      const existing = grouped.get(parentKey);
+      const existing = groups.get(childKey);
   
       if (existing) {
-        if (!existing.children.some((item) => item.id === child.id)) {
-          existing.children.push(child);
+        if (!existing.parents.some((parent) => parent.id === root.id)) {
+          existing.parents.push(root);
         }
       } else {
-        const parentGeneration = Math.max(
-          ...parents.map(
-            (parentId) => memberGenerationMap.get(parentId) ?? 0
-          )
-        );
-  
-        grouped.set(parentKey, {
-          id: parentKey,
-          parents: validParents,
-          children: [child],
-          generation: parentGeneration,
+        groups.set(childKey, {
+          parents: [root],
+          children,
         });
       }
     }
   
-    return Array.from(grouped.values()).sort(
-      (a, b) => a.generation - b.generation
-    );
-  }, [members, parentMap, memberGenerationMap]);
+    return Array.from(groups.values());
+  }, [members, parentMap, childrenMap]);
 
   function handleMemberClick(memberId: string) {
     setSelectedMemberId((current) =>
@@ -341,33 +335,24 @@ export default function FamilyTree() {
               </p>
             </div>
           ) : (
-            <div className="space-y-14">
-              {/* Những người chưa có cha/mẹ trong dữ liệu */}
-              {members
-                .filter((member) => !parentMap.has(member.id))
-                .map((member) => (
-                  <div
-                    key={`root-${member.id}`}
-                    className="flex justify-center"
-                  >
-                    <FamilyMemberCard
-                      member={member}
-                      isSelected={selectedMemberId === member.id}
-                      onClick={() => handleMemberClick(member.id)}
-                    />
-                  </div>
-                ))}
-            
-              {/* Các nhánh gia đình */}
-              {branches.map((branch) => (
-                <div key={branch.id}>
-                  <FamilyBranch
-                    parents={branch.parents}
-                    children={branch.children}
-                    selectedMemberId={selectedMemberId}
-                    onMemberClick={handleMemberClick}
-                  />
-                </div>
+            <div className="space-y-16">
+              {rootBranches.map((branch, index) => (
+                <FamilyTreeBranch
+                  key={`root-branch-${index}`}
+                  parents={branch.parents}
+                  children={branch.children}
+                  allMembers={members}
+                  parentMap={parentMap}
+                  childrenMap={childrenMap}
+                  selectedMemberId={selectedMemberId}
+                  onMemberClick={handleMemberClick}
+                  renderedIds={
+                    new Set([
+                      ...branch.parents.map((member) => member.id),
+                      ...branch.children.map((member) => member.id),
+                    ])
+                  }
+                />
               ))}
             </div>
           )}
