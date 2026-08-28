@@ -79,7 +79,7 @@ export default function FamilyTreeBranch({
   return (
     <div className="flex flex-col items-center">
       {/* Cha / mẹ */}
-      <div className="flex items-center justify-center gap-6">
+      <div className="flex items-center justify-center gap-4 md:gap-6">
         {parents.map((parent, index) => (
           <div key={parent.id} className="relative">
             <FamilyMemberCard
@@ -89,8 +89,10 @@ export default function FamilyTreeBranch({
             />
 
             {index < parents.length - 1 && (
-              <div className="absolute top-1/2 -right-5 -translate-y-1/2 text-primary text-xl">
-                ♥
+              <div className="absolute top-1/2 -right-4 md:-right-5 -translate-y-1/2">
+                <div className="w-8 h-8 rounded-full bg-surface-container-highest border border-primary/20 flex items-center justify-center">
+                  <span className="text-primary text-sm">♥</span>
+                </div>
               </div>
             )}
           </div>
@@ -100,17 +102,17 @@ export default function FamilyTreeBranch({
       {visibleChildren.length > 0 && (
         <>
           {/* Đường dọc */}
-          <div className="w-px h-10 bg-primary/30" />
+          <div className="w-px h-12 bg-primary/25" />
 
           {/* Đường ngang */}
           {visibleChildren.length > 1 && (
             <div className="relative w-[75%] max-w-4xl h-6">
-              <div className="absolute left-0 right-0 top-0 border-t border-primary/30" />
+              <div className="absolute left-[8%] right-[8%] top-0 border-t border-primary/25" />
             </div>
           )}
 
           {/* Các gia đình con */}
-          <div className="flex justify-center gap-12 flex-wrap">
+          <div className="flex justify-center gap-8 md:gap-12 flex-wrap">
             {visibleChildren.map((child) => {
               const spouse = getAvailableSpouse(child);
 
