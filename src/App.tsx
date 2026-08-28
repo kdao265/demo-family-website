@@ -43,7 +43,7 @@ export default function App() {
                   <Families />
                 </AdminGuard>
               }
-            
+            />
 
               <Route
                 path="/admin/members"
