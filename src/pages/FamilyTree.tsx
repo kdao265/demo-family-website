@@ -1,10 +1,16 @@
-import { Heart, Search } from 'lucide-react';
-import React from 'react';
+import { Heart } from 'lucide-react';
+import React, { useState } from 'react';
+import FamilyMemberCard from '../components/family/FamilyMemberCard';
+import { members } from '../data';
 
 export default function FamilyTree() {
+  const [selectedMemberId, setSelectedMemberId] = useState<string | null>(
+    null
+  );
+
   return (
     <div className="pt-[72px] min-h-screen bg-surface">
-      {/* Header */}
+      {/* Page Header */}
       <section className="py-16 px-margin-mobile md:px-margin-desktop bg-surface-container-low border-b border-outline/10">
         <div className="max-w-4xl mx-auto text-center">
           <span className="font-label-md text-primary uppercase tracking-[0.15em]">
@@ -18,37 +24,97 @@ export default function FamilyTree() {
           <div className="w-16 h-1 bg-primary/30 mx-auto rounded-full mb-6"></div>
 
           <p className="font-body-lg text-on-surface-variant max-w-2xl mx-auto leading-relaxed">
-            Tìm hiểu những thế hệ đã cùng nhau tạo nên mái nhà này.
+            Mỗi thế hệ là một phần của câu chuyện. Hãy cùng tìm về những
+            người đã tạo nên mái nhà này.
           </p>
         </div>
       </section>
 
-      {/* Temporary tree introduction */}
-      <section className="py-section-gap px-margin-mobile md:px-margin-desktop">
-        <div className="max-w-5xl mx-auto">
-          <div className="bg-surface-container-low rounded-[2rem] p-8 md:p-12 border border-outline/10 text-center">
-            <Heart className="w-10 h-10 text-primary fill-current mx-auto mb-5" />
+      {/* Tree */}
+      <section className="py-section-gap px-margin-mobile md:px-margin-desktop overflow-x-auto">
+        <div className="max-w-6xl mx-auto min-w-[760px]">
+          <div className="text-center mb-12">
+            <span className="font-label-md text-primary uppercase tracking-[0.15em]">
+              Cây gia phả
+            </span>
 
-            <h2 className="font-headline-lg text-headline-lg text-secondary mb-4">
-              Cây gia phả đang được xây dựng
+            <h2 className="font-headline-lg text-headline-lg text-secondary mt-3">
+              Các thành viên
             </h2>
+          </div>
 
-            <p className="font-body-md text-on-surface-variant max-w-2xl mx-auto leading-relaxed mb-8">
-              Đây sẽ là nơi các thành viên có thể khám phá từng thế hệ,
-              tìm hiểu mối quan hệ giữa các thành viên và mở xem câu chuyện
-              của từng người.
-            </p>
-
-            <div className="max-w-xl mx-auto relative">
-              <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-on-surface-variant/50" />
-
-              <input
-                type="text"
-                placeholder="Tìm thành viên..."
-                className="w-full bg-surface border border-outline/30 rounded-full py-3 pl-12 pr-5 font-body-md focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all"
-              />
+          {/* Temporary first generation */}
+          <div className="flex justify-center">
+            <div className="relative">
+              {members[0] && (
+                <FamilyMemberCard
+                  member={members[0]}
+                  isSelected={selectedMemberId === members[0].id}
+                  onClick={() =>
+                    setSelectedMemberId(
+                      selectedMemberId === members[0].id
+                        ? null
+                        : members[0].id
+                    )
+                  }
+                />
+              )}
             </div>
           </div>
+
+          {/* Connector */}
+          <div className="flex justify-center py-6">
+            <div className="w-px h-12 bg-primary/30"></div>
+          </div>
+
+          {/* Temporary second generation */}
+          <div className="flex justify-center gap-12">
+            {members.slice(1).map((member) => (
+              <FamilyMemberCard
+                key={member.id}
+                member={member}
+                isSelected={selectedMemberId === member.id}
+                onClick={() =>
+                  setSelectedMemberId(
+                    selectedMemberId === member.id ? null : member.id
+                  )
+                }
+              />
+            ))}
+          </div>
+
+          {/* Selected member info */}
+          {selectedMemberId && (
+            <div className="max-w-2xl mx-auto mt-12 bg-surface-container-low rounded-3xl p-8 border border-outline/10">
+              {(() => {
+                const member = members.find(
+                  (item) => item.id === selectedMemberId
+                );
+
+                if (!member) return null;
+
+                return (
+                  <div className="text-center">
+                    <Heart className="w-7 h-7 text-primary fill-current mx-auto mb-4" />
+
+                    <h3 className="font-headline-md text-headline-md text-secondary mb-2">
+                      {member.name}
+                    </h3>
+
+                    <p className="font-body-md text-on-surface-variant">
+                      Sinh ngày {member.birthDate}
+                    </p>
+
+                    {member.shortBio && (
+                      <p className="font-body-md text-on-surface-variant mt-4 leading-relaxed">
+                        {member.shortBio}
+                      </p>
+                    )}
+                  </div>
+                );
+              })()}
+            </div>
+          )}
         </div>
       </section>
     </div>
