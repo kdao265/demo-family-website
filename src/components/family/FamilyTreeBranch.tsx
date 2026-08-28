@@ -12,7 +12,7 @@ interface Member {
 }
 
 interface FamilyTreeBranchProps {
-  member: Member;
+  parents: Member[];
   children: Member[];
   allMembers: Member[];
   childrenMap: Map<string, string[]>;
@@ -22,7 +22,7 @@ interface FamilyTreeBranchProps {
 }
 
 export default function FamilyTreeBranch({
-  member,
+  parents,
   children,
   allMembers,
   childrenMap,
@@ -31,42 +31,55 @@ export default function FamilyTreeBranch({
   renderedIds,
 }: FamilyTreeBranchProps) {
   const memberMap = new Map(
-    allMembers.map((item) => [item.id, item])
+    allMembers.map((member) => [member.id, member])
   );
 
-  const nextChildren = children.filter(
+  const visibleChildren = children.filter(
     (child) => !renderedIds.has(child.id)
   );
 
   return (
     <div className="flex flex-col items-center">
-      {/* Thành viên hiện tại */}
-      <FamilyMemberCard
-        member={member}
-        isSelected={selectedMemberId === member.id}
-        onClick={() => onMemberClick(member.id)}
-      />
+      {/* Cha / mẹ */}
+      <div className="flex items-center justify-center gap-6">
+        {parents.map((parent, index) => (
+          <div key={parent.id} className="relative">
+            <FamilyMemberCard
+              member={parent}
+              isSelected={selectedMemberId === parent.id}
+              onClick={() => onMemberClick(parent.id)}
+            />
 
-      {nextChildren.length > 0 && (
+            {index < parents.length - 1 && (
+              <div className="absolute top-1/2 -right-5 -translate-y-1/2 text-primary text-xl">
+                ♥
+              </div>
+            )}
+          </div>
+        ))}
+      </div>
+
+      {/* Con */}
+      {visibleChildren.length > 0 && (
         <>
-          {/* Đường nối xuống */}
           <div className="w-px h-10 bg-primary/30" />
 
-          {/* Thanh ngang */}
-          {nextChildren.length > 1 && (
+          {visibleChildren.length > 1 && (
             <div className="relative w-full max-w-5xl h-6">
-              <div className="absolute left-1/2 right-1/2 top-0 border-t border-primary/30" />
+              <div className="absolute left-1/2 -translate-x-1/2 top-0 w-[80%] border-t border-primary/30" />
             </div>
           )}
 
-          {/* Các con */}
           <div className="flex flex-wrap justify-center gap-10">
-            {nextChildren.map((child) => {
-              const grandChildrenIds = childrenMap.get(child.id) ?? [];
+            {visibleChildren.map((child) => {
+              const childIds = childrenMap.get(child.id) ?? [];
 
-              const grandChildren = grandChildrenIds
+              const grandchildren = childIds
                 .map((id) => memberMap.get(id))
                 .filter(Boolean) as Member[];
+
+              const nextRenderedIds = new Set(renderedIds);
+              nextRenderedIds.add(child.id);
 
               return (
                 <div
@@ -76,19 +89,13 @@ export default function FamilyTreeBranch({
                   <div className="w-px h-6 bg-primary/30" />
 
                   <FamilyTreeBranch
-                    member={child}
-                    children={grandChildren}
+                    parents={[child]}
+                    children={grandchildren}
                     allMembers={allMembers}
                     childrenMap={childrenMap}
                     selectedMemberId={selectedMemberId}
                     onMemberClick={onMemberClick}
-                    renderedIds={
-                      new Set([
-                        ...renderedIds,
-                        member.id,
-                        child.id,
-                      ])
-                    }
+                    renderedIds={nextRenderedIds}
                   />
                 </div>
               );
