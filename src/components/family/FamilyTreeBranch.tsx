@@ -16,6 +16,7 @@ interface FamilyTreeBranchProps {
   children: Member[];
   allMembers: Member[];
   childrenMap: Map<string, string[]>;
+  spouseMap: Map<string, Member[]>;
   selectedMemberId: string | null;
   onMemberClick: (memberId: string) => void;
   renderedIds: Set<string>;
@@ -26,6 +27,7 @@ export default function FamilyTreeBranch({
   children,
   allMembers,
   childrenMap,
+  spouseMap,
   selectedMemberId,
   onMemberClick,
   renderedIds,
@@ -33,6 +35,44 @@ export default function FamilyTreeBranch({
   const memberMap = new Map(
     allMembers.map((member) => [member.id, member])
   );
+
+  /*
+   * Một thành viên có thể có vợ/chồng.
+   * Tạm thời lấy người bạn đời đầu tiên.
+   */
+  function getFamilyUnit(member: Member) {
+    const spouses = spouseMap.get(member.id) ?? [];
+
+    const spouse = spouses.find(
+      (item) =>
+        item.id !== member.id &&
+        !renderedIds.has(item.id)
+    );
+
+    return spouse ? [member, spouse] : [member];
+  }
+
+  /*
+   * Tìm tất cả con của một gia đình nhỏ.
+   * Nếu cha và mẹ cùng có con thì loại bỏ trùng.
+   */
+  function getChildrenOfFamily(parentsUnit: Member[]) {
+    const childIds = new Set<string>();
+
+    for (const parent of parentsUnit) {
+      const ids = childrenMap.get(parent.id) ?? [];
+
+      for (const childId of ids) {
+        if (!renderedIds.has(childId)) {
+          childIds.add(childId);
+        }
+      }
+    }
+
+    return Array.from(childIds)
+      .map((id) => memberMap.get(id))
+      .filter(Boolean) as Member[];
+  }
 
   const visibleChildren = children.filter(
     (child) => !renderedIds.has(child.id)
@@ -59,44 +99,80 @@ export default function FamilyTreeBranch({
         ))}
       </div>
 
-      {/* Con */}
       {visibleChildren.length > 0 && (
         <>
+          {/* Đường nối */}
           <div className="w-px h-10 bg-primary/30" />
 
           {visibleChildren.length > 1 && (
             <div className="relative w-full max-w-5xl h-6">
-              <div className="absolute left-1/2 -translate-x-1/2 top-0 w-[80%] border-t border-primary/30" />
+              <div className="absolute left-[10%] right-[10%] top-0 border-t border-primary/30" />
             </div>
           )}
 
-          <div className="flex flex-wrap justify-center gap-10">
+          {/* Các con */}
+          <div className="flex flex-wrap justify-center gap-12">
             {visibleChildren.map((child) => {
-              const childIds = childrenMap.get(child.id) ?? [];
+              const familyUnit = getFamilyUnit(child);
 
-              const grandchildren = childIds
-                .map((id) => memberMap.get(id))
-                .filter(Boolean) as Member[];
+              const grandchildren =
+                getChildrenOfFamily(familyUnit);
 
               const nextRenderedIds = new Set(renderedIds);
-              nextRenderedIds.add(child.id);
+
+              for (const member of familyUnit) {
+                nextRenderedIds.add(member.id);
+              }
 
               return (
                 <div
                   key={child.id}
                   className="flex flex-col items-center"
                 >
-                  <div className="w-px h-6 bg-primary/30" />
+                  {/* Gia đình nhỏ của người con */}
+                  <div className="flex items-center justify-center gap-6">
+                    {familyUnit.map((member, index) => (
+                      <div
+                        key={member.id}
+                        className="relative"
+                      >
+                        <FamilyMemberCard
+                          member={member}
+                          isSelected={
+                            selectedMemberId === member.id
+                          }
+                          onClick={() =>
+                            onMemberClick(member.id)
+                          }
+                        />
 
-                  <FamilyTreeBranch
-                    parents={[child]}
-                    children={grandchildren}
-                    allMembers={allMembers}
-                    childrenMap={childrenMap}
-                    selectedMemberId={selectedMemberId}
-                    onMemberClick={onMemberClick}
-                    renderedIds={nextRenderedIds}
-                  />
+                        {index <
+                          familyUnit.length - 1 && (
+                          <div className="absolute top-1/2 -right-5 -translate-y-1/2 text-primary text-xl">
+                            ♥
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Con của gia đình nhỏ này */}
+                  {grandchildren.length > 0 && (
+                    <div className="mt-10">
+                      <FamilyTreeBranch
+                        parents={familyUnit}
+                        children={grandchildren}
+                        allMembers={allMembers}
+                        childrenMap={childrenMap}
+                        spouseMap={spouseMap}
+                        selectedMemberId={
+                          selectedMemberId
+                        }
+                        onMemberClick={onMemberClick}
+                        renderedIds={nextRenderedIds}
+                      />
+                    </div>
+                  )}
                 </div>
               );
             })}
