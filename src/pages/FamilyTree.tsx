@@ -1,12 +1,27 @@
 import { Heart } from 'lucide-react';
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import FamilyMemberCard from '../components/family/FamilyMemberCard';
 import { members } from '../data';
+import { useEffect } from 'react';
+import { supabase } from '../lib/supabase';
 
 export default function FamilyTree() {
   const [selectedMemberId, setSelectedMemberId] = useState<string | null>(
     null
   );
+
+  useEffect(() => {
+    async function testSupabase() {
+      const { data, error } = await supabase
+        .from('families')
+        .select('*');
+  
+      console.log('SUPABASE DATA:', data);
+      console.log('SUPABASE ERROR:', error);
+    }
+  
+    testSupabase();
+  }, []);
 
   return (
     <div className="pt-[72px] min-h-screen bg-surface">
