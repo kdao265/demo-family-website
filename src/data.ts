@@ -8,6 +8,17 @@ import {
   TimelineSnippetEvent,
 } from './types';
 
+import {
+  AnniversaryPhoto,
+  CoreValue,
+  FamilyRelationship,
+  GalleryItem,
+  GuestbookMessage,
+  Member,
+  TimelineEvent,
+  TimelineSnippetEvent,
+} from './types';
+
 export const members: Member[] = [
   {
     id: '1',
@@ -229,3 +240,5 @@ export const timelineSnippet: TimelineSnippetEvent[] = [
     description: 'Khoảnh khắc hoàng hôn lãng mạn bên Hồ Gươm.',
   },
 ];
+
+export const familyRelationships: FamilyRelationship[] = [];
