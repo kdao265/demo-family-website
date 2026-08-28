@@ -31,9 +31,17 @@ interface DisplayMember {
   shortBio?: string;
 }
 
+interface Generation {
+  level: number;
+  members: DisplayMember[];
+}
+
 export default function FamilyTree() {
   const [members, setMembers] = useState<DisplayMember[]>([]);
-  const [relationships, setRelationships] = useState<FamilyRelationship[]>([]);
+  const [relationships, setRelationships] = useState<
+    FamilyRelationship[]
+  >([]);
+
   const [selectedMemberId, setSelectedMemberId] = useState<string | null>(
     null
   );
@@ -78,7 +86,7 @@ export default function FamilyTree() {
       }
 
       const mappedMembers: DisplayMember[] = (membersResult.data ?? []).map(
-        (member) => ({
+        (member: FamilyMember) => ({
           id: member.id,
           name: member.full_name,
           birthDate: member.birth_date ?? 'Chưa cập nhật',
@@ -105,21 +113,136 @@ export default function FamilyTree() {
     [members, selectedMemberId]
   );
 
-  const rootMembers = useMemo(() => {
-    const childIds = new Set(
-      relationships.map((relationship) => relationship.child_id)
+  /*
+   * Tạo map:
+   * parent -> các con
+   */
+  const childrenMap = useMemo(() => {
+    const map = new Map<string, string[]>();
+
+    for (const relationship of relationships) {
+      const children = map.get(relationship.parent_id) ?? [];
+
+      if (!children.includes(relationship.child_id)) {
+        children.push(relationship.child_id);
+      }
+
+      map.set(relationship.parent_id, children);
+    }
+
+    return map;
+  }, [relationships]);
+
+  /*
+   * Tạo map:
+   * child -> các cha/mẹ
+   */
+  const parentMap = useMemo(() => {
+    const map = new Map<string, string[]>();
+
+    for (const relationship of relationships) {
+      const parents = map.get(relationship.child_id) ?? [];
+
+      if (!parents.includes(relationship.parent_id)) {
+        parents.push(relationship.parent_id);
+      }
+
+      map.set(relationship.child_id, parents);
+    }
+
+    return map;
+  }, [relationships]);
+
+  /*
+   * Xác định thế hệ của mỗi người.
+   *
+   * Người không có cha/mẹ trong dữ liệu:
+   * generation = 0
+   *
+   * Con:
+   * generation = generation của cha/mẹ + 1
+   */
+  const memberGenerationMap = useMemo(() => {
+    const generationMap = new Map<string, number>();
+
+    const visit = (
+      memberId: string,
+      generation: number,
+      path: Set<string>
+    ) => {
+      // Chặn vòng lặp dữ liệu
+      if (path.has(memberId)) {
+        return;
+      }
+
+      const currentGeneration = generationMap.get(memberId);
+
+      if (
+        currentGeneration === undefined ||
+        generation > currentGeneration
+      ) {
+        generationMap.set(memberId, generation);
+      }
+
+      const children = childrenMap.get(memberId) ?? [];
+
+      const nextPath = new Set(path);
+      nextPath.add(memberId);
+
+      for (const childId of children) {
+        visit(childId, generation + 1, nextPath);
+      }
+    };
+
+    const rootMembers = members.filter(
+      (member) => !parentMap.has(member.id)
     );
 
-    return members.filter((member) => !childIds.has(member.id));
-  }, [members, relationships]);
+    for (const root of rootMembers) {
+      visit(root.id, 0, new Set());
+    }
 
-  const childrenOf = (parentId: string) => {
-    const childIds = relationships
-      .filter((relationship) => relationship.parent_id === parentId)
-      .map((relationship) => relationship.child_id);
+    /*
+     * Thành viên bị thiếu root do dữ liệu quan hệ bất thường:
+     * vẫn cho xuất hiện ở tầng cuối cùng.
+     */
+    for (const member of members) {
+      if (!generationMap.has(member.id)) {
+        generationMap.set(member.id, 0);
+      }
+    }
 
-    return members.filter((member) => childIds.includes(member.id));
-  };
+    return generationMap;
+  }, [members, parentMap, childrenMap]);
+
+  /*
+   * Gom thành viên theo thế hệ.
+   */
+  const generations = useMemo<Generation[]>(() => {
+    const generationMap = new Map<number, DisplayMember[]>();
+
+    for (const member of members) {
+      const level = memberGenerationMap.get(member.id) ?? 0;
+
+      const generationMembers = generationMap.get(level) ?? [];
+      generationMembers.push(member);
+
+      generationMap.set(level, generationMembers);
+    }
+
+    return Array.from(generationMap.entries())
+      .sort(([a], [b]) => a - b)
+      .map(([level, generationMembers]) => ({
+        level,
+        members: generationMembers,
+      }));
+  }, [members, memberGenerationMap]);
+
+  function handleMemberClick(memberId: string) {
+    setSelectedMemberId((current) =>
+      current === memberId ? null : memberId
+    );
+  }
 
   if (loading) {
     return (
@@ -165,14 +288,14 @@ export default function FamilyTree() {
 
       {/* Tree */}
       <section className="py-section-gap px-margin-mobile md:px-margin-desktop overflow-x-auto">
-        <div className="max-w-6xl mx-auto min-w-[760px]">
+        <div className="max-w-7xl mx-auto min-w-[900px]">
           <div className="text-center mb-12">
             <span className="font-label-md text-primary uppercase tracking-[0.15em]">
               Cây gia phả
             </span>
 
             <h2 className="font-headline-lg text-headline-lg text-secondary mt-3">
-              Các thành viên
+              Các thế hệ
             </h2>
           </div>
 
@@ -183,52 +306,41 @@ export default function FamilyTree() {
               </p>
             </div>
           ) : (
-            <>
-              {/* Generation 1 */}
-              <div className="flex justify-center gap-12 flex-wrap">
-                {rootMembers.map((member) => (
-                  <FamilyMemberCard
-                    key={member.id}
-                    member={member}
-                    isSelected={selectedMemberId === member.id}
-                    onClick={() =>
-                      setSelectedMemberId(
-                        selectedMemberId === member.id ? null : member.id
-                      )
-                    }
-                  />
-                ))}
-              </div>
+            <div className="space-y-10">
+              {generations.map((generation, index) => (
+                <React.Fragment key={generation.level}>
+                  {index > 0 && (
+                    <div className="flex justify-center">
+                      <div className="w-px h-10 bg-primary/30"></div>
+                    </div>
+                  )}
 
-              {/* Children */}
-              {rootMembers.some((member) => childrenOf(member.id).length > 0) && (
-                <>
-                  <div className="flex justify-center py-6">
-                    <div className="w-px h-12 bg-primary/30"></div>
-                  </div>
+                  <div>
+                    <div className="text-center mb-5">
+                      <span className="font-label-md text-primary/70">
+                        Thế hệ {generation.level + 1}
+                      </span>
+                    </div>
 
-                  <div className="flex justify-center gap-12 flex-wrap">
-                    {rootMembers.flatMap((parent) =>
-                      childrenOf(parent.id).map((child) => (
+                    <div className="flex justify-center gap-10 flex-wrap">
+                      {generation.members.map((member) => (
                         <FamilyMemberCard
-                          key={`${parent.id}-${child.id}`}
-                          member={child}
-                          isSelected={selectedMemberId === child.id}
+                          key={member.id}
+                          member={member}
+                          isSelected={selectedMemberId === member.id}
                           onClick={() =>
-                            setSelectedMemberId(
-                              selectedMemberId === child.id ? null : child.id
-                            )
+                            handleMemberClick(member.id)
                           }
                         />
-                      ))
-                    )}
+                      ))}
+                    </div>
                   </div>
-                </>
-              )}
-            </>
+                </React.Fragment>
+              ))}
+            </div>
           )}
 
-          {/* Selected member info */}
+          {/* Selected member */}
           {selectedMember && (
             <div className="max-w-2xl mx-auto mt-12 bg-surface-container-low rounded-3xl p-8 border border-outline/10">
               <div className="text-center">
