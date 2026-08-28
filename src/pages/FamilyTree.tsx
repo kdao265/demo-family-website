@@ -1,6 +1,7 @@
 import { Heart } from 'lucide-react';
 import React, { useEffect, useMemo, useState } from 'react';
 import FamilyMemberCard from '../components/family/FamilyMemberCard';
+import FamilyBranch from '../components/family/FamilyBranch';
 import { supabase } from '../lib/supabase';
 
 interface FamilyMember {
@@ -29,11 +30,6 @@ interface DisplayMember {
   imageAlt: string;
   relation?: string;
   shortBio?: string;
-}
-
-interface Generation {
-  level: number;
-  members: DisplayMember[];
 }
 
 export default function FamilyTree() {
@@ -215,28 +211,67 @@ export default function FamilyTree() {
     return generationMap;
   }, [members, parentMap, childrenMap]);
 
-  /*
-   * Gom thành viên theo thế hệ.
-   */
-  const generations = useMemo<Generation[]>(() => {
-    const generationMap = new Map<number, DisplayMember[]>();
-
-    for (const member of members) {
-      const level = memberGenerationMap.get(member.id) ?? 0;
-
-      const generationMembers = generationMap.get(level) ?? [];
-      generationMembers.push(member);
-
-      generationMap.set(level, generationMembers);
+  interface FamilyBranchData {
+    id: string;
+    parents: DisplayMember[];
+    children: DisplayMember[];
+    generation: number;
+  }
+  
+  const branches = useMemo<FamilyBranchData[]>(() => {
+    const memberMap = new Map(
+      members.map((member) => [member.id, member])
+    );
+  
+    const grouped = new Map<string, FamilyBranchData>();
+  
+    for (const child of members) {
+      const parents = parentMap.get(child.id) ?? [];
+  
+      if (parents.length === 0) {
+        continue;
+      }
+  
+      const validParents = parents
+        .map((parentId) => memberMap.get(parentId))
+        .filter(Boolean) as DisplayMember[];
+  
+      if (validParents.length === 0) {
+        continue;
+      }
+  
+      /*
+       * Những người có cùng tập cha/mẹ
+       * sẽ được gom vào cùng một nhánh.
+       */
+      const parentKey = [...parents].sort().join('|');
+  
+      const existing = grouped.get(parentKey);
+  
+      if (existing) {
+        if (!existing.children.some((item) => item.id === child.id)) {
+          existing.children.push(child);
+        }
+      } else {
+        const parentGeneration = Math.max(
+          ...parents.map(
+            (parentId) => memberGenerationMap.get(parentId) ?? 0
+          )
+        );
+  
+        grouped.set(parentKey, {
+          id: parentKey,
+          parents: validParents,
+          children: [child],
+          generation: parentGeneration,
+        });
+      }
     }
-
-    return Array.from(generationMap.entries())
-      .sort(([a], [b]) => a - b)
-      .map(([level, generationMembers]) => ({
-        level,
-        members: generationMembers,
-      }));
-  }, [members, memberGenerationMap]);
+  
+    return Array.from(grouped.values()).sort(
+      (a, b) => a.generation - b.generation
+    );
+  }, [members, parentMap, memberGenerationMap]);
 
   function handleMemberClick(memberId: string) {
     setSelectedMemberId((current) =>
@@ -306,36 +341,33 @@ export default function FamilyTree() {
               </p>
             </div>
           ) : (
-            <div className="space-y-10">
-              {generations.map((generation, index) => (
-                <React.Fragment key={generation.level}>
-                  {index > 0 && (
-                    <div className="flex justify-center">
-                      <div className="w-px h-10 bg-primary/30"></div>
-                    </div>
-                  )}
-
-                  <div>
-                    <div className="text-center mb-5">
-                      <span className="font-label-md text-primary/70">
-                        Thế hệ {generation.level + 1}
-                      </span>
-                    </div>
-
-                    <div className="flex justify-center gap-10 flex-wrap">
-                      {generation.members.map((member) => (
-                        <FamilyMemberCard
-                          key={member.id}
-                          member={member}
-                          isSelected={selectedMemberId === member.id}
-                          onClick={() =>
-                            handleMemberClick(member.id)
-                          }
-                        />
-                      ))}
-                    </div>
+            <div className="space-y-14">
+              {/* Những người chưa có cha/mẹ trong dữ liệu */}
+              {members
+                .filter((member) => !parentMap.has(member.id))
+                .map((member) => (
+                  <div
+                    key={`root-${member.id}`}
+                    className="flex justify-center"
+                  >
+                    <FamilyMemberCard
+                      member={member}
+                      isSelected={selectedMemberId === member.id}
+                      onClick={() => handleMemberClick(member.id)}
+                    />
                   </div>
-                </React.Fragment>
+                ))}
+            
+              {/* Các nhánh gia đình */}
+              {branches.map((branch) => (
+                <div key={branch.id}>
+                  <FamilyBranch
+                    parents={branch.parents}
+                    children={branch.children}
+                    selectedMemberId={selectedMemberId}
+                    onMemberClick={handleMemberClick}
+                  />
+                </div>
               ))}
             </div>
           )}
