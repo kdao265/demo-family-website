@@ -180,9 +180,8 @@ export default function Home() {
             </h2>
 
             <p className="font-body-md text-on-surface-variant leading-relaxed">
-              Gia đình lớn lên cùng năm tháng. Những con số dưới đây sẽ được
-              kết nối với dữ liệu thật của gia đình khi chúng ta xây dựng phần
-              gia phả và cơ sở dữ liệu.
+              Gia đình lớn lên cùng năm tháng. Mỗi thế hệ đi qua đều để lại những
+              câu chuyện, những kỷ niệm và những người thân yêu.
             </p>
           </div>
 
