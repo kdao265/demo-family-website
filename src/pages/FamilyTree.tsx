@@ -9,25 +9,6 @@ export default function FamilyTree() {
     null
   );
 
-  useEffect(() => {
-    async function testSupabase() {
-      const { data, error } = await supabase
-        .from('families')
-        .select('*');
-  
-      console.log('SUPABASE DATA:', data);
-
-      if (error) {
-        console.error('SUPABASE ERROR MESSAGE:', error.message);
-        console.error('SUPABASE ERROR DETAILS:', error.details);
-        console.error('SUPABASE ERROR HINT:', error.hint);
-        console.error('SUPABASE ERROR CODE:', error.code);
-      }
-    }
-  
-    testSupabase();
-  }, []);
-
   return (
     <div className="pt-[72px] min-h-screen bg-surface">
       {/* Page Header */}
