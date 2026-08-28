@@ -127,10 +127,6 @@ export default function Home() {
                   <div className="absolute inset-0 bg-gradient-to-t from-on-surface/70 via-transparent to-transparent"></div>
 
                   <div className="absolute left-5 right-5 bottom-5">
-                    <span className="inline-flex items-center px-3 py-1.5 rounded-full bg-on-primary/90 text-on-surface text-xs font-label-md mb-3">
-                      Thành viên gia đình
-                    </span>
-
                     <h3 className="font-headline-md text-xl text-on-primary">
                       {member.name}
                     </h3>
@@ -154,13 +150,13 @@ export default function Home() {
                   </div>
 
                   <div className="mt-6 pt-5 border-t border-outline/10">
-                    <button
-                      type="button"
+                    <Link
+                      to="/story"
                       className="inline-flex items-center gap-2 text-primary font-label-md group-hover:gap-3 transition-all"
                     >
                       Xem câu chuyện
                       <ArrowRight className="w-4 h-4" />
-                    </button>
+                    </Link>
                   </div>
                 </div>
               </article>
