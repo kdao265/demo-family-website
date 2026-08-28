@@ -2,7 +2,6 @@ import { Heart } from 'lucide-react';
 import React, { useEffect, useState } from 'react';
 import FamilyMemberCard from '../components/family/FamilyMemberCard';
 import { members } from '../data';
-import { useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 
 export default function FamilyTree() {
