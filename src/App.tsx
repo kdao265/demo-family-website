@@ -13,6 +13,7 @@ import AdminGuard from './components/admin/AdminGuard';
 import Families from './pages/admin/Families';
 import Members from './pages/admin/Members';
 import Relationships from './pages/admin/Relationships';
+import Moments from './pages/admin/Moments';
 
 export default function App() {
   return (
@@ -60,6 +61,15 @@ export default function App() {
               element={
                 <AdminGuard>
                   <Relationships />
+                </AdminGuard>
+              }
+            />
+
+            <Route
+              path="/admin/moments"
+              element={
+                <AdminGuard>
+                  <Moments />
                 </AdminGuard>
               }
             />
