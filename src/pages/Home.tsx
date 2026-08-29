@@ -1,9 +1,49 @@
 import { ArrowRight, Heart, Users, CalendarDays, Images } from 'lucide-react';
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { members, homeGallery } from '../data';
+import { supabase } from '../lib/supabase';
+import { homeGallery } from '../data';
+
+interface FamilyMember {
+  id: string;
+  full_name: string;
+  birth_date: string | null;
+  hobbies: string[] | null;
+  avatar_url: string | null;
+}
 
 export default function Home() {
+  const [members, setMembers] = useState<FamilyMember[]>([]);
+  const [loadingMembers, setLoadingMembers] = useState(true);
+
+  useEffect(() => {
+    async function loadMembers() {
+      setLoadingMembers(true);
+
+      const { data, error } = await supabase
+        .from('family_members')
+        .select(
+          'id, full_name, birth_date, hobbies, avatar_url'
+        )
+        .order('created_at', { ascending: true });
+
+      if (error) {
+        console.error(
+          'Load homepage members error:',
+          error
+        );
+
+        setMembers([]);
+      } else {
+        setMembers(data ?? []);
+      }
+
+      setLoadingMembers(false);
+    }
+
+    loadMembers();
+  }, []);
+
   return (
     <div className="pt-[72px]">
       {/* =========================================================
@@ -111,57 +151,81 @@ export default function Home() {
             </p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            {members.map((member) => (
-              <article
-                key={member.id}
-                className="group bg-surface-container-lowest rounded-3xl overflow-hidden border border-outline/10 family-card-shadow hover-lift"
-              >
-                <div className="relative h-72 overflow-hidden">
-                  <img
-                    src={member.imageUrl}
-                    alt={member.imageAlt}
-                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
-                  />
-
-                  <div className="absolute inset-0 bg-gradient-to-t from-on-surface/70 via-transparent to-transparent"></div>
-
-                  <div className="absolute left-5 right-5 bottom-5">
-                    <h3 className="font-headline-md text-xl text-on-primary">
-                      {member.name}
-                    </h3>
+          {loadingMembers ? (
+            <div className="text-center py-16">
+              <p className="font-body-md text-on-surface-variant">
+                Đang tải thành viên...
+              </p>
+            </div>
+          ) : members.length === 0 ? (
+            <div className="text-center py-16">
+              <p className="font-body-md text-on-surface-variant">
+                Chưa có thành viên nào được giới thiệu.
+              </p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+              {members.slice(0, 6).map((member) => (
+                <article
+                  key={member.id}
+                  className="group bg-surface-container-lowest rounded-3xl overflow-hidden border border-outline/10 family-card-shadow hover-lift"
+                >
+                  <div className="relative h-72 overflow-hidden">
+                    {member.avatar_url ? (
+                      <img
+                        src={member.avatar_url}
+                        alt={member.full_name}
+                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
+                      />
+                    ) : (
+                      <div className="w-full h-full bg-surface-container-low flex items-center justify-center">
+                        <span className="font-headline-lg text-5xl text-primary/30">
+                          {member.full_name.charAt(0)}
+                        </span>
+                      </div>
+                    )}
+          
+                    <div className="absolute inset-0 bg-gradient-to-t from-on-surface/70 via-transparent to-transparent"></div>
+          
+                    <div className="absolute left-5 right-5 bottom-5">
+                      <h3 className="font-headline-md text-xl text-on-primary">
+                        {member.full_name}
+                      </h3>
+                    </div>
                   </div>
-                </div>
-
-                <div className="p-6">
-                  <p className="font-body-md text-on-surface-variant mb-4">
-                    Sinh ngày {member.birthDate}
-                  </p>
-
-                  <div className="flex flex-wrap gap-2">
-                    {member.hobbies.map((hobby) => (
-                      <span
-                        key={hobby}
-                        className="px-3 py-1.5 rounded-full bg-surface-variant text-on-surface-variant text-xs font-medium"
+          
+                  <div className="p-6">
+                    <p className="font-body-md text-on-surface-variant mb-4">
+                      {member.birth_date
+                        ? `Sinh ngày ${member.birth_date}`
+                        : 'Ngày sinh chưa cập nhật'}
+                    </p>
+          
+                    <div className="flex flex-wrap gap-2">
+                      {(member.hobbies ?? []).map((hobby) => (
+                        <span
+                          key={hobby}
+                          className="px-3 py-1.5 rounded-full bg-surface-variant text-on-surface-variant text-xs font-medium"
+                        >
+                          {hobby}
+                        </span>
+                      ))}
+                    </div>
+          
+                    <div className="mt-6 pt-5 border-t border-outline/10">
+                      <Link
+                        to="/story"
+                        className="inline-flex items-center gap-2 text-primary font-label-md group-hover:gap-3 transition-all"
                       >
-                        {hobby}
-                      </span>
-                    ))}
+                        Xem câu chuyện
+                        <ArrowRight className="w-4 h-4" />
+                      </Link>
+                    </div>
                   </div>
-
-                  <div className="mt-6 pt-5 border-t border-outline/10">
-                    <Link
-                      to="/story"
-                      className="inline-flex items-center gap-2 text-primary font-label-md group-hover:gap-3 transition-all"
-                    >
-                      Xem câu chuyện
-                      <ArrowRight className="w-4 h-4" />
-                    </Link>
-                  </div>
-                </div>
-              </article>
-            ))}
-          </div>
+                </article>
+              ))}
+            </div>
+          )}
         </div>
       </section>
 
