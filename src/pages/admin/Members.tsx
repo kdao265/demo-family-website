@@ -233,26 +233,47 @@ export default function Members() {
        */
       if (editingMember) {
         let avatarUrl = editingMember.avatar_url;
-  
+        let uploadedFilePath: string | null = null;
+      
         /*
-         * Nếu chọn ảnh mới → upload ảnh mới
+         * Nếu admin chọn ảnh mới,
+         * upload ảnh mới trước.
          */
         if (selectedFile) {
-          avatarUrl = await uploadAvatar(
-            selectedFile,
-            editingMember.id
-          );
-        } else if (
-          selectedFile &&
-          previewUrl.startsWith('blob:')
-        ) {
-          avatarUrl = await uploadAvatar(
-            selectedFile,
-            editingMember.id
-          );
+          const fileExtension =
+            selectedFile.name.split('.').pop()?.toLowerCase() || 'jpg';
+      
+          uploadedFilePath = `members/${editingMember.id}-${Date.now()}.${fileExtension}`;
+      
+          const { error: uploadError } = await supabase.storage
+            .from('family-avatars')
+            .upload(uploadedFilePath, selectedFile, {
+              cacheControl: '3600',
+              upsert: false,
+              contentType: selectedFile.type,
+            });
+      
+          if (uploadError) {
+            console.error(
+              'Upload avatar error:',
+              uploadError
+            );
+      
+            throw new Error('Không thể tải ảnh lên.');
+          }
+      
+          const { data: publicUrlData } =
+            supabase.storage
+              .from('family-avatars')
+              .getPublicUrl(uploadedFilePath);
+      
+          avatarUrl = publicUrlData.publicUrl;
         }
-  
-        const { error } = await supabase
+      
+        /*
+         * Cập nhật thông tin member.
+         */
+        const { error: updateError } = await supabase
           .from('family_members')
           .update({
             family_id: familyId,
@@ -265,20 +286,79 @@ export default function Members() {
             avatar_url: avatarUrl,
           })
           .eq('id', editingMember.id);
-  
-        if (error) {
+      
+        /*
+         * Nếu DB update thất bại nhưng ảnh mới đã upload,
+         * xóa ảnh mới để tránh tạo file rác.
+         */
+        if (updateError) {
+          if (uploadedFilePath) {
+            const { error: cleanupError } =
+              await supabase.storage
+                .from('family-avatars')
+                .remove([uploadedFilePath]);
+      
+            if (cleanupError) {
+              console.error(
+                'Cleanup uploaded avatar error:',
+                cleanupError
+              );
+            }
+          }
+      
           console.error(
             'Update member error:',
-            error
+            updateError
           );
-  
+      
           throw new Error(
             'Không thể cập nhật thành viên.'
           );
         }
-  
+      
+        /*
+         * Sau khi DB đã cập nhật thành công,
+         * xóa ảnh cũ khỏi Storage nếu có.
+         */
+        if (
+          selectedFile &&
+          editingMember.avatar_url
+        ) {
+          try {
+            const marker =
+              '/storage/v1/object/public/family-avatars/';
+      
+            const markerIndex =
+              editingMember.avatar_url.indexOf(marker);
+      
+            if (markerIndex !== -1) {
+              const oldFilePath =
+                editingMember.avatar_url.substring(
+                  markerIndex + marker.length
+                );
+      
+              const { error: deleteOldError } =
+                await supabase.storage
+                  .from('family-avatars')
+                  .remove([oldFilePath]);
+      
+              if (deleteOldError) {
+                console.error(
+                  'Delete old avatar error:',
+                  deleteOldError
+                );
+              }
+            }
+          } catch (error) {
+            console.error(
+              'Delete old avatar exception:',
+              error
+            );
+          }
+        }
+      
         await loadData();
-  
+      
         setSaving(false);
         closeModal();
         return;
@@ -460,7 +540,7 @@ export default function Members() {
 
           <button
             type="button"
-            onClick={openModal}
+            onClick={openAddModal}
             disabled={families.length === 0}
             className="inline-flex items-center justify-center gap-2 bg-primary text-on-primary px-6 py-3 rounded-full font-label-md hover:bg-primary-container transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
@@ -500,7 +580,7 @@ export default function Members() {
               {families.length > 0 && (
                 <button
                   type="button"
-                  onClick={openModal}
+                  onClick={openAddModal}
                   className="inline-flex items-center gap-2 text-primary font-label-md"
                 >
                   <Plus className="w-5 h-5" />
