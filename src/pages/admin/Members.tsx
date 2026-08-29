@@ -26,6 +26,8 @@ export default function Members() {
   const [saving, setSaving] = useState(false);
 
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [editingMember, setEditingMember] =
+    useState<FamilyMember | null>(null);
 
   const [fullName, setFullName] = useState('');
   const [birthDate, setBirthDate] = useState('');
@@ -87,37 +89,60 @@ export default function Members() {
     setLoading(false);
   }
 
-  function openModal() {
+  function openAddModal() {
+    setEditingMember(null);
+  
     setFullName('');
     setBirthDate('');
     setFamilyId(families[0]?.id ?? '');
     setRelationTitle('');
     setShortBio('');
     setHobbies('');
-
+  
     setSelectedFile(null);
-
+  
     if (previewUrl) {
       URL.revokeObjectURL(previewUrl);
     }
-
+  
     setPreviewUrl('');
-
+    setErrorMessage('');
+    setIsModalOpen(true);
+  }
+  
+  function openEditModal(member: FamilyMember) {
+    setEditingMember(member);
+  
+    setFullName(member.full_name);
+    setBirthDate(member.birth_date ?? '');
+    setFamilyId(member.family_id);
+    setRelationTitle(member.relation_title ?? '');
+    setShortBio(member.short_bio ?? '');
+    setHobbies((member.hobbies ?? []).join(', '));
+  
+    setSelectedFile(null);
+  
+    if (previewUrl) {
+      URL.revokeObjectURL(previewUrl);
+    }
+  
+    setPreviewUrl(member.avatar_url ?? '');
     setErrorMessage('');
     setIsModalOpen(true);
   }
 
   function closeModal() {
     if (saving) return;
-
+  
     setIsModalOpen(false);
+    setEditingMember(null);
     setErrorMessage('');
     setSelectedFile(null);
-
+  
     if (previewUrl) {
       URL.revokeObjectURL(previewUrl);
     }
-
+  
     setPreviewUrl('');
   }
 
@@ -177,92 +202,234 @@ export default function Members() {
     return data.publicUrl;
   }
 
-  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
+  async function handleSubmit(
+    event: FormEvent<HTMLFormElement>
+  ) {
     event.preventDefault();
-
+  
     if (!fullName.trim()) {
       setErrorMessage('Vui lòng nhập họ và tên.');
       return;
     }
-
+  
     if (!familyId) {
       setErrorMessage('Vui lòng chọn gia đình.');
       return;
     }
-
+  
     setSaving(true);
     setErrorMessage('');
-
+  
     try {
       const hobbiesArray = hobbies
         .split(',')
         .map((item) => item.trim())
         .filter(Boolean);
-
-      // Bước 1: tạo member trước để lấy UUID
-      const { data: newMember, error: insertError } = await supabase
-        .from('family_members')
-        .insert({
-          family_id: familyId,
-          full_name: fullName.trim(),
-          birth_date: birthDate || null,
-          relation_title: relationTitle.trim() || null,
-          short_bio: shortBio.trim() || null,
-          hobbies: hobbiesArray,
-          avatar_url: null,
-        })
-        .select('id')
-        .single();
-
-      if (insertError || !newMember) {
-        console.error('Insert member error:', insertError);
-        throw new Error('Không thể thêm thành viên.');
+  
+      /*
+       * =========================
+       * CHỈNH SỬA
+       * =========================
+       */
+      if (editingMember) {
+        let avatarUrl = editingMember.avatar_url;
+  
+        /*
+         * Nếu chọn ảnh mới → upload ảnh mới
+         */
+        if (selectedFile) {
+          avatarUrl = await uploadAvatar(
+            selectedFile,
+            editingMember.id
+          );
+        } else if (
+          selectedFile &&
+          previewUrl.startsWith('blob:')
+        ) {
+          avatarUrl = await uploadAvatar(
+            selectedFile,
+            editingMember.id
+          );
+        }
+  
+        const { error } = await supabase
+          .from('family_members')
+          .update({
+            family_id: familyId,
+            full_name: fullName.trim(),
+            birth_date: birthDate || null,
+            relation_title:
+              relationTitle.trim() || null,
+            short_bio: shortBio.trim() || null,
+            hobbies: hobbiesArray,
+            avatar_url: avatarUrl,
+          })
+          .eq('id', editingMember.id);
+  
+        if (error) {
+          console.error(
+            'Update member error:',
+            error
+          );
+  
+          throw new Error(
+            'Không thể cập nhật thành viên.'
+          );
+        }
+  
+        await loadData();
+  
+        setSaving(false);
+        closeModal();
+        return;
       }
-
-      let avatarUrl: string | null = null;
-
-      // Bước 2: upload ảnh nếu người dùng đã chọn
+  
+      /*
+       * =========================
+       * THÊM MỚI
+       * =========================
+       */
+      const { data: newMember, error: insertError } =
+        await supabase
+          .from('family_members')
+          .insert({
+            family_id: familyId,
+            full_name: fullName.trim(),
+            birth_date: birthDate || null,
+            relation_title:
+              relationTitle.trim() || null,
+            short_bio: shortBio.trim() || null,
+            hobbies: hobbiesArray,
+            avatar_url: null,
+          })
+          .select('id')
+          .single();
+  
+      if (insertError || !newMember) {
+        console.error(
+          'Insert member error:',
+          insertError
+        );
+  
+        throw new Error(
+          'Không thể thêm thành viên.'
+        );
+      }
+  
       if (selectedFile) {
-        avatarUrl = await uploadAvatar(
+        const avatarUrl = await uploadAvatar(
           selectedFile,
           newMember.id
         );
-
-        // Bước 3: cập nhật avatar_url
-        const { error: updateError } = await supabase
-          .from('family_members')
-          .update({
-            avatar_url: avatarUrl,
-          })
-          .eq('id', newMember.id);
-
+  
+        const { error: updateError } =
+          await supabase
+            .from('family_members')
+            .update({
+              avatar_url: avatarUrl,
+            })
+            .eq('id', newMember.id);
+  
         if (updateError) {
           console.error(
             'Update avatar URL error:',
             updateError
           );
-
+  
           throw new Error(
             'Đã tạo thành viên nhưng không thể lưu ảnh.'
           );
         }
       }
-
+  
       await loadData();
-
+  
       setSaving(false);
       closeModal();
     } catch (error) {
-      console.error('Create member error:', error);
-
+      console.error(
+        'Save member error:',
+        error
+      );
+  
       setErrorMessage(
         error instanceof Error
           ? error.message
-          : 'Không thể thêm thành viên.'
+          : 'Không thể lưu thành viên.'
       );
-
+  
       setSaving(false);
     }
+  }
+
+  async function handleDelete(member: FamilyMember) {
+    const confirmed = window.confirm(
+      `Bạn có chắc muốn xóa "${member.full_name}"?\n\nCác quan hệ gia phả liên quan đến thành viên này cũng có thể bị xóa theo.`,
+    );
+  
+    if (!confirmed) {
+      return;
+    }
+  
+    setErrorMessage('');
+  
+    /*
+     * Nếu có ảnh:
+     * cố gắng xóa ảnh khỏi Storage trước.
+     */
+    if (member.avatar_url) {
+      try {
+        const marker =
+          '/storage/v1/object/public/family-avatars/';
+  
+        const markerIndex =
+          member.avatar_url.indexOf(marker);
+  
+        if (markerIndex !== -1) {
+          const filePath =
+            member.avatar_url.substring(
+              markerIndex + marker.length
+            );
+  
+          const { error: storageError } =
+            await supabase.storage
+              .from('family-avatars')
+              .remove([filePath]);
+  
+          if (storageError) {
+            console.error(
+              'Delete avatar error:',
+              storageError
+            );
+          }
+        }
+      } catch (error) {
+        console.error(
+          'Delete avatar exception:',
+          error
+        );
+      }
+    }
+  
+    const { error } = await supabase
+      .from('family_members')
+      .delete()
+      .eq('id', member.id);
+  
+    if (error) {
+      console.error(
+        'Delete member error:',
+        error
+      );
+  
+      setErrorMessage(
+        'Không thể xóa thành viên.'
+      );
+  
+      return;
+    }
+  
+    await loadData();
   }
 
   function getFamilyName(id: string) {
@@ -380,6 +547,26 @@ export default function Members() {
                         {member.short_bio}
                       </p>
                     )}
+                  </div>
+
+                  <div className="flex items-center gap-3 mt-6 pt-5 border-t border-outline/10">
+                    <button
+                      type="button"
+                      onClick={() => openEditModal(member)}
+                      className="inline-flex items-center gap-2 text-primary font-label-md"
+                    >
+                      ✏️
+                      Sửa
+                    </button>
+                  
+                    <button
+                      type="button"
+                      onClick={() => handleDelete(member)}
+                      className="inline-flex items-center gap-2 text-secondary font-label-md hover:text-primary transition-colors"
+                    >
+                      🗑️
+                      Xóa
+                    </button>
                   </div>
                 </article>
               ))}
