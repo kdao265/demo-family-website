@@ -1,5 +1,5 @@
-import { Plus, X, Save } from 'lucide-react';
-import { FormEvent, useEffect, useState } from 'react';
+import { Plus, X, Save, Upload, Image as ImageIcon } from 'lucide-react';
+import { FormEvent, useEffect, useRef, useState } from 'react';
 import { supabase } from '../../lib/supabase';
 
 interface Family {
@@ -33,13 +33,25 @@ export default function Members() {
   const [relationTitle, setRelationTitle] = useState('');
   const [shortBio, setShortBio] = useState('');
   const [hobbies, setHobbies] = useState('');
-  const [avatarUrl, setAvatarUrl] = useState('');
+
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [previewUrl, setPreviewUrl] = useState('');
 
   const [errorMessage, setErrorMessage] = useState('');
+
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   useEffect(() => {
     loadData();
   }, []);
+
+  useEffect(() => {
+    return () => {
+      if (previewUrl) {
+        URL.revokeObjectURL(previewUrl);
+      }
+    };
+  }, [previewUrl]);
 
   async function loadData() {
     setLoading(true);
@@ -82,7 +94,15 @@ export default function Members() {
     setRelationTitle('');
     setShortBio('');
     setHobbies('');
-    setAvatarUrl('');
+
+    setSelectedFile(null);
+
+    if (previewUrl) {
+      URL.revokeObjectURL(previewUrl);
+    }
+
+    setPreviewUrl('');
+
     setErrorMessage('');
     setIsModalOpen(true);
   }
@@ -92,10 +112,69 @@ export default function Members() {
 
     setIsModalOpen(false);
     setErrorMessage('');
+    setSelectedFile(null);
+
+    if (previewUrl) {
+      URL.revokeObjectURL(previewUrl);
+    }
+
+    setPreviewUrl('');
   }
 
-  function getFamilyName(id: string) {
-    return families.find((family) => family.id === id)?.name ?? 'Không xác định';
+  function handleFileChange(
+    event: React.ChangeEvent<HTMLInputElement>
+  ) {
+    const file = event.target.files?.[0];
+
+    if (!file) {
+      return;
+    }
+
+    if (!file.type.startsWith('image/')) {
+      setErrorMessage('Vui lòng chọn một file ảnh.');
+      return;
+    }
+
+    const maxSize = 5 * 1024 * 1024;
+
+    if (file.size > maxSize) {
+      setErrorMessage('Ảnh không được lớn hơn 5MB.');
+      return;
+    }
+
+    setErrorMessage('');
+    setSelectedFile(file);
+
+    if (previewUrl) {
+      URL.revokeObjectURL(previewUrl);
+    }
+
+    setPreviewUrl(URL.createObjectURL(file));
+  }
+
+  async function uploadAvatar(file: File, memberId: string) {
+    const fileExtension = file.name.split('.').pop()?.toLowerCase() || 'jpg';
+
+    const filePath = `members/${memberId}-${Date.now()}.${fileExtension}`;
+
+    const { error: uploadError } = await supabase.storage
+      .from('family-avatars')
+      .upload(filePath, file, {
+        cacheControl: '3600',
+        upsert: false,
+        contentType: file.type,
+      });
+
+    if (uploadError) {
+      console.error('Upload avatar error:', uploadError);
+      throw new Error('Không thể tải ảnh lên.');
+    }
+
+    const { data } = supabase.storage
+      .from('family-avatars')
+      .getPublicUrl(filePath);
+
+    return data.publicUrl;
   }
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
@@ -114,32 +193,83 @@ export default function Members() {
     setSaving(true);
     setErrorMessage('');
 
-    const hobbiesArray = hobbies
-      .split(',')
-      .map((item) => item.trim())
-      .filter(Boolean);
+    try {
+      const hobbiesArray = hobbies
+        .split(',')
+        .map((item) => item.trim())
+        .filter(Boolean);
 
-    const { error } = await supabase.from('family_members').insert({
-      family_id: familyId,
-      full_name: fullName.trim(),
-      birth_date: birthDate || null,
-      relation_title: relationTitle.trim() || null,
-      short_bio: shortBio.trim() || null,
-      hobbies: hobbiesArray,
-      avatar_url: avatarUrl.trim() || null,
-    });
+      // Bước 1: tạo member trước để lấy UUID
+      const { data: newMember, error: insertError } = await supabase
+        .from('family_members')
+        .insert({
+          family_id: familyId,
+          full_name: fullName.trim(),
+          birth_date: birthDate || null,
+          relation_title: relationTitle.trim() || null,
+          short_bio: shortBio.trim() || null,
+          hobbies: hobbiesArray,
+          avatar_url: null,
+        })
+        .select('id')
+        .single();
 
-    if (error) {
-      console.error('Insert member error:', error);
-      setErrorMessage('Không thể thêm thành viên.');
+      if (insertError || !newMember) {
+        console.error('Insert member error:', insertError);
+        throw new Error('Không thể thêm thành viên.');
+      }
+
+      let avatarUrl: string | null = null;
+
+      // Bước 2: upload ảnh nếu người dùng đã chọn
+      if (selectedFile) {
+        avatarUrl = await uploadAvatar(
+          selectedFile,
+          newMember.id
+        );
+
+        // Bước 3: cập nhật avatar_url
+        const { error: updateError } = await supabase
+          .from('family_members')
+          .update({
+            avatar_url: avatarUrl,
+          })
+          .eq('id', newMember.id);
+
+        if (updateError) {
+          console.error(
+            'Update avatar URL error:',
+            updateError
+          );
+
+          throw new Error(
+            'Đã tạo thành viên nhưng không thể lưu ảnh.'
+          );
+        }
+      }
+
+      await loadData();
+
       setSaving(false);
-      return;
+      closeModal();
+    } catch (error) {
+      console.error('Create member error:', error);
+
+      setErrorMessage(
+        error instanceof Error
+          ? error.message
+          : 'Không thể thêm thành viên.'
+      );
+
+      setSaving(false);
     }
+  }
 
-    await loadData();
-
-    setSaving(false);
-    closeModal();
+  function getFamilyName(id: string) {
+    return (
+      families.find((family) => family.id === id)?.name ??
+      'Không xác định'
+    );
   }
 
   return (
@@ -226,9 +356,7 @@ export default function Members() {
                     />
                   ) : (
                     <div className="w-full h-52 bg-surface-container-low flex items-center justify-center">
-                      <span className="font-headline-md text-4xl text-primary/30">
-                        {member.full_name.charAt(0)}
-                      </span>
+                      <ImageIcon className="w-10 h-10 text-primary/30" />
                     </div>
                   )}
 
@@ -287,6 +415,7 @@ export default function Members() {
             </div>
 
             <form onSubmit={handleSubmit} className="space-y-5">
+              {/* Họ tên */}
               <div>
                 <label className="block font-label-md text-sm text-secondary mb-2">
                   Họ và tên
@@ -295,13 +424,16 @@ export default function Members() {
                 <input
                   type="text"
                   value={fullName}
-                  onChange={(event) => setFullName(event.target.value)}
+                  onChange={(event) =>
+                    setFullName(event.target.value)
+                  }
                   placeholder="Nguyễn Văn A"
                   required
                   className="w-full bg-surface border border-outline/30 rounded-2xl px-4 py-3 font-body-md text-on-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary"
                 />
               </div>
 
+              {/* Ngày sinh + gia đình */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
                 <div>
                   <label className="block font-label-md text-sm text-secondary mb-2">
@@ -311,7 +443,9 @@ export default function Members() {
                   <input
                     type="date"
                     value={birthDate}
-                    onChange={(event) => setBirthDate(event.target.value)}
+                    onChange={(event) =>
+                      setBirthDate(event.target.value)
+                    }
                     className="w-full bg-surface border border-outline/30 rounded-2xl px-4 py-3 font-body-md text-on-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary"
                   />
                 </div>
@@ -323,7 +457,9 @@ export default function Members() {
 
                   <select
                     value={familyId}
-                    onChange={(event) => setFamilyId(event.target.value)}
+                    onChange={(event) =>
+                      setFamilyId(event.target.value)
+                    }
                     required
                     className="w-full bg-surface border border-outline/30 rounded-2xl px-4 py-3 font-body-md text-on-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary"
                   >
@@ -338,6 +474,7 @@ export default function Members() {
                 </div>
               </div>
 
+              {/* Tiêu đề */}
               <div>
                 <label className="block font-label-md text-sm text-secondary mb-2">
                   Tiêu đề dưới tên
@@ -346,12 +483,15 @@ export default function Members() {
                 <input
                   type="text"
                   value={relationTitle}
-                  onChange={(event) => setRelationTitle(event.target.value)}
+                  onChange={(event) =>
+                    setRelationTitle(event.target.value)
+                  }
                   placeholder="Ví dụ: Người giữ lửa"
                   className="w-full bg-surface border border-outline/30 rounded-2xl px-4 py-3 font-body-md text-on-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary"
                 />
               </div>
 
+              {/* Giới thiệu */}
               <div>
                 <label className="block font-label-md text-sm text-secondary mb-2">
                   Giới thiệu
@@ -359,13 +499,16 @@ export default function Members() {
 
                 <textarea
                   value={shortBio}
-                  onChange={(event) => setShortBio(event.target.value)}
+                  onChange={(event) =>
+                    setShortBio(event.target.value)
+                  }
                   rows={4}
                   placeholder="Một vài dòng giới thiệu về thành viên..."
                   className="w-full bg-surface border border-outline/30 rounded-2xl px-4 py-3 font-body-md text-on-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary resize-none"
                 />
               </div>
 
+              {/* Sở thích */}
               <div>
                 <label className="block font-label-md text-sm text-secondary mb-2">
                   Sở thích
@@ -374,7 +517,9 @@ export default function Members() {
                 <input
                   type="text"
                   value={hobbies}
-                  onChange={(event) => setHobbies(event.target.value)}
+                  onChange={(event) =>
+                    setHobbies(event.target.value)
+                  }
                   placeholder="Nấu ăn, đọc sách, trồng cây"
                   className="w-full bg-surface border border-outline/30 rounded-2xl px-4 py-3 font-body-md text-on-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary"
                 />
@@ -384,25 +529,61 @@ export default function Members() {
                 </p>
               </div>
 
+              {/* Ảnh */}
               <div>
                 <label className="block font-label-md text-sm text-secondary mb-2">
-                  URL ảnh đại diện
+                  Ảnh đại diện
                 </label>
 
                 <input
-                  type="url"
-                  value={avatarUrl}
-                  onChange={(event) => setAvatarUrl(event.target.value)}
-                  placeholder="https://..."
-                  className="w-full bg-surface border border-outline/30 rounded-2xl px-4 py-3 font-body-md text-on-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary"
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/*"
+                  onChange={handleFileChange}
+                  className="hidden"
                 />
 
-                <p className="font-body-md text-xs text-on-surface-variant mt-2">
-                  Tạm thời dùng URL ảnh. Sau này chúng ta sẽ tích hợp
-                  Supabase Storage để tải ảnh trực tiếp.
-                </p>
+                <button
+                  type="button"
+                  onClick={() => fileInputRef.current?.click()}
+                  className="w-full border-2 border-dashed border-outline/30 rounded-2xl px-6 py-8 hover:border-primary/40 hover:bg-surface-container-low transition-colors"
+                >
+                  {previewUrl ? (
+                    <div className="flex flex-col items-center gap-4">
+                      <img
+                        src={previewUrl}
+                        alt="Ảnh xem trước"
+                        className="w-32 h-32 rounded-2xl object-cover"
+                      />
+
+                      <div className="flex items-center gap-2 text-primary font-label-md">
+                        <Upload className="w-4 h-4" />
+                        Đổi ảnh
+                      </div>
+
+                      <p className="font-body-md text-xs text-on-surface-variant">
+                        {selectedFile?.name}
+                      </p>
+                    </div>
+                  ) : (
+                    <div className="flex flex-col items-center gap-3">
+                      <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center">
+                        <Upload className="w-5 h-5 text-primary" />
+                      </div>
+
+                      <p className="font-label-md text-secondary">
+                        Chọn ảnh từ máy
+                      </p>
+
+                      <p className="font-body-md text-xs text-on-surface-variant">
+                        JPG, PNG, WEBP — tối đa 5MB
+                      </p>
+                    </div>
+                  )}
+                </button>
               </div>
 
+              {/* Error */}
               {errorMessage && (
                 <div className="rounded-2xl bg-primary/10 border border-primary/20 px-4 py-3">
                   <p className="font-body-md text-sm text-primary">
@@ -411,12 +592,13 @@ export default function Members() {
                 </div>
               )}
 
+              {/* Buttons */}
               <div className="flex flex-col sm:flex-row gap-3 pt-2">
                 <button
                   type="button"
                   onClick={closeModal}
                   disabled={saving}
-                  className="flex-1 px-5 py-3 rounded-full border border-outline/30 text-secondary font-label-md hover:bg-surface-container-low transition-colors"
+                  className="flex-1 px-5 py-3 rounded-full border border-outline/30 text-secondary font-label-md hover:bg-surface-container-low transition-colors disabled:opacity-50"
                 >
                   Hủy
                 </button>
