@@ -1,3 +1,4 @@
+import React from 'react';
 import FamilyMemberCard from './FamilyMemberCard';
 
 interface Member {
