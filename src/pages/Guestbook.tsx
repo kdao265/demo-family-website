@@ -173,7 +173,7 @@ export default function Guestbook() {
           recipient_name:
             recipient?.full_name ?? null,
           message: trimmedMessage,
-          is_approved: true,
+          is_approved: false,
         });
 
       if (error) {
