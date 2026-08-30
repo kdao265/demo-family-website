@@ -466,7 +466,7 @@ export default function FamilyTree() {
       
           {/* Canvas */}
           <div
-            className={`relative h-[750px] overflow-hidden rounded-3xl border border-outline/10 bg-surface-container-low ${
+            className={`relative h-[800px] md:h-[850px] overflow-hidden rounded-3xl border border-outline/10 bg-surface-container-low ${
               isDragging
                 ? 'cursor-grabbing'
                 : 'cursor-grab'
@@ -493,7 +493,7 @@ export default function FamilyTree() {
                 transformOrigin: 'center center',
               }}
             >
-              <div className="min-w-[900px]">
+              <div className="w-max min-w-[900px] px-16 py-16">
                 {members.length === 0 ? (
                   <div className="text-center py-16 bg-surface-container-low rounded-3xl border border-outline/10">
                     <p className="font-body-lg text-on-surface-variant">
