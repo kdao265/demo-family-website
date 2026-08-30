@@ -17,10 +17,10 @@ export default function Story() {
         </div>
         
         <div className="relative z-10 text-center px-margin-mobile md:px-margin-desktop max-w-3xl mx-auto animate-fade-in-up">
-          <h1 className="font-display-lg text-display-lg text-secondary mb-6">Câu Chuyện Của Chúng Ta</h1>
+          <h1 className="font-display-lg text-display-lg text-secondary mb-6">Câu chuyện của gia đình</h1>
           <div className="w-16 h-1 bg-primary/30 mx-auto rounded-full mb-6"></div>
           <p className="font-body-lg text-body-lg text-on-surface-variant max-w-2xl mx-auto leading-relaxed">
-            Mỗi gia đình là một cuốn sách lịch sử được viết bằng tình yêu. Hãy cùng nhìn lại những trang sách đẹp nhất của Love Family.
+            Mỗi gia đình là một cuốn sách lịch sử được viết bằng tình yêu. Hãy cùng nhìn lại những trang sách đẹp nhất của đại gia đình chúng ta.
           </p>
         </div>
       </section>
@@ -89,7 +89,7 @@ export default function Story() {
       {/* Values Section */}
       <section className="py-section-gap px-margin-mobile md:px-margin-desktop max-w-container-max mx-auto">
         <div className="text-center mb-16 animate-fade-in-up">
-          <h2 className="font-headline-lg text-headline-lg text-secondary mb-4">Giá Trị Cốt Lõi</h2>
+          <h2 className="font-headline-lg text-headline-lg text-secondary mb-4">Giá trị gia đình</h2>
           <div className="w-16 h-1 bg-primary/30 mx-auto rounded-full mb-6"></div>
           <p className="font-body-md text-body-md text-on-surface-variant max-w-2xl mx-auto">
             Những viên gạch tinh thần xây dựng nên nền móng vững chắc của gia đình qua nhiều thế hệ.
