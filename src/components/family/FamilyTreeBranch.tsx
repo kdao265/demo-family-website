@@ -50,10 +50,10 @@ export default function FamilyTreeBranch({
   const isCollapsed =
     collapsedFamilyIds.has(familyUnitId);
 
-  function getAvailableSpouses(member: Member) {
+  function getAvailableSpouse(member: Member) {
     const spouses = spouseMap.get(member.id) ?? [];
 
-    return spouses.filter(
+    return spouses.find(
       (spouse) =>
         spouse.id !== member.id &&
         !renderedIds.has(spouse.id)
@@ -66,8 +66,7 @@ export default function FamilyTreeBranch({
     const childIds = new Set<string>();
 
     for (const parent of parentList) {
-      const ids =
-        childrenMap.get(parent.id) ?? [];
+      const ids = childrenMap.get(parent.id) ?? [];
 
       for (const childId of ids) {
         childIds.add(childId);
@@ -88,6 +87,46 @@ export default function FamilyTreeBranch({
   const visibleChildren = children.filter(
     (child) => !renderedIds.has(child.id)
   );
+
+  /*
+   * Không có children => đây chỉ là một family unit lá.
+   */
+  if (visibleChildren.length === 0) {
+    return (
+      <div className="flex flex-col items-center">
+        {showParents && (
+          <div className="flex items-center justify-center gap-4 md:gap-6">
+            {parents.map((parent, index) => (
+              <div
+                key={parent.id}
+                className="relative"
+              >
+                <FamilyMemberCard
+                  member={parent}
+                  isSelected={
+                    selectedMemberId === parent.id
+                  }
+                  onClick={() =>
+                    onMemberClick(parent.id)
+                  }
+                />
+
+                {index < parents.length - 1 && (
+                  <div className="absolute top-1/2 -right-4 md:-right-5 -translate-y-1/2">
+                    <div className="w-8 h-8 rounded-full bg-surface-container-highest border border-primary/20 flex items-center justify-center">
+                      <span className="text-primary text-sm">
+                        ♥
+                      </span>
+                    </div>
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-col items-center">
@@ -126,148 +165,148 @@ export default function FamilyTreeBranch({
       )}
 
       {/* =================================================
-          COLLAPSE BUTTON
+          COLLAPSE
          ================================================= */}
-      {children.length > 0 && (
-        <button
-          type="button"
-          onClick={() =>
-            onToggleCollapse(
-              parents.map((parent) => parent.id)
-            )
-          }
-          className="my-3 w-8 h-8 rounded-full bg-surface border border-primary/30 text-primary hover:bg-primary/10 transition-colors flex items-center justify-center text-lg font-semibold shadow-sm z-10"
-          aria-label={
-            isCollapsed
-              ? 'Mở rộng nhánh gia đình'
-              : 'Thu gọn nhánh gia đình'
-          }
-        >
-          {isCollapsed ? '+' : '−'}
-        </button>
-      )}
+      <button
+        type="button"
+        onClick={() =>
+          onToggleCollapse(
+            parents.map((parent) => parent.id)
+          )
+        }
+        className="my-3 w-8 h-8 rounded-full bg-surface border border-primary/30 text-primary hover:bg-primary/10 transition-colors flex items-center justify-center text-lg font-semibold shadow-sm z-10"
+        aria-label={
+          isCollapsed
+            ? 'Mở rộng nhánh gia đình'
+            : 'Thu gọn nhánh gia đình'
+        }
+      >
+        {isCollapsed ? '+' : '−'}
+      </button>
 
-      {/* =================================================
-          CHILDREN
-         ================================================= */}
-      {visibleChildren.length > 0 &&
-        !isCollapsed && (
-          <>
-            {/* Vertical line */}
-            <div className="w-px h-12 bg-primary/25" />
+      {!isCollapsed && (
+        <>
+          {/* =================================================
+              PARENT -> CHILDREN VERTICAL
+             ================================================= */}
+          <div className="w-px h-8 bg-primary/25" />
 
-            {/* Horizontal line */}
+          {/* =================================================
+              CHILDREN AREA
+             ================================================= */}
+          <div className="relative flex justify-center gap-8 md:gap-12">
+            {/* Horizontal connector */}
             {visibleChildren.length > 1 && (
-              <div className="relative w-[75%] max-w-4xl h-6">
-                <div className="absolute left-[8%] right-[8%] top-0 border-t border-primary/25" />
-              </div>
+              <div
+                className="absolute top-0 h-px bg-primary/25"
+                style={{
+                  left: 'calc(110px + 1rem)',
+                  right: 'calc(110px + 1rem)',
+                }}
+              />
             )}
 
-            {/* Child family units */}
-            <div className="flex justify-center gap-8 md:gap-12 flex-wrap">
-              {visibleChildren.map((child) => {
-                const availableSpouses =
-                  getAvailableSpouses(child);
+            {visibleChildren.map((child) => {
+              const spouse =
+                getAvailableSpouse(child);
 
-                const spouse =
-                  availableSpouses[0] ?? null;
+              const childFamily = spouse
+                ? [child, spouse]
+                : [child];
 
-                const childFamily = spouse
-                  ? [child, spouse]
-                  : [child];
+              const familyChildren =
+                getChildrenOfFamily(childFamily);
 
-                const familyChildren =
-                  getChildrenOfFamily(childFamily);
+              const nextRenderedIds =
+                new Set(renderedIds);
 
-                const nextRenderedIds =
-                  new Set(renderedIds);
+              nextRenderedIds.add(child.id);
 
-                nextRenderedIds.add(child.id);
+              if (spouse) {
+                nextRenderedIds.add(spouse.id);
+              }
 
-                if (spouse) {
-                  nextRenderedIds.add(spouse.id);
-                }
+              return (
+                <div
+                  key={child.id}
+                  className="relative flex flex-col items-center pt-6"
+                >
+                  {/* Vertical connector to child */}
+                  <div className="absolute top-0 left-1/2 -translate-x-1/2 w-px h-6 bg-primary/25" />
 
-                return (
-                  <div
-                    key={child.id}
-                    className="flex flex-col items-center"
-                  >
-                    {/* ===================================
-                        CHILD + SPOUSE
-                       =================================== */}
-                    <div className="flex items-center justify-center gap-6">
-                      <div className="relative">
-                        <FamilyMemberCard
-                          member={child}
-                          isSelected={
-                            selectedMemberId ===
-                            child.id
-                          }
-                          onClick={() =>
-                            onMemberClick(child.id)
-                          }
-                        />
-
-                        {spouse && (
-                          <div className="absolute top-1/2 -right-5 -translate-y-1/2 text-primary text-xl">
-                            ♥
-                          </div>
-                        )}
-                      </div>
+                  {/* =======================================
+                      CHILD FAMILY UNIT
+                     ======================================= */}
+                  <div className="flex items-center justify-center gap-6">
+                    <div className="relative">
+                      <FamilyMemberCard
+                        member={child}
+                        isSelected={
+                          selectedMemberId === child.id
+                        }
+                        onClick={() =>
+                          onMemberClick(child.id)
+                        }
+                      />
 
                       {spouse && (
-                        <FamilyMemberCard
-                          member={spouse}
-                          isSelected={
-                            selectedMemberId ===
-                            spouse.id
-                          }
-                          onClick={() =>
-                            onMemberClick(spouse.id)
-                          }
-                        />
+                        <div className="absolute top-1/2 -right-5 -translate-y-1/2 text-primary text-xl">
+                          ♥
+                        </div>
                       )}
                     </div>
 
-                    {/* ===================================
-                        CHILDREN OF THIS FAMILY
-                       =================================== */}
-                    {familyChildren.length > 0 && (
-                      <>
-                        <div className="w-px h-10 bg-primary/30" />
-
-                        <FamilyTreeBranch
-                          parents={childFamily}
-                          children={familyChildren}
-                          allMembers={allMembers}
-                          childrenMap={childrenMap}
-                          spouseMap={spouseMap}
-                          selectedMemberId={
-                            selectedMemberId
-                          }
-                          onMemberClick={
-                            onMemberClick
-                          }
-                          renderedIds={
-                            nextRenderedIds
-                          }
-                          collapsedFamilyIds={
-                            collapsedFamilyIds
-                          }
-                          onToggleCollapse={
-                            onToggleCollapse
-                          }
-                          showParents={false}
-                        />
-                      </>
+                    {spouse && (
+                      <FamilyMemberCard
+                        member={spouse}
+                        isSelected={
+                          selectedMemberId === spouse.id
+                        }
+                        onClick={() =>
+                          onMemberClick(spouse.id)
+                        }
+                      />
                     )}
                   </div>
-                );
-              })}
-            </div>
-          </>
-        )}
+
+                  {/* =======================================
+                      GRANDCHILDREN
+                     ======================================= */}
+                  {familyChildren.length > 0 && (
+                    <>
+                      <div className="w-px h-10 bg-primary/30" />
+
+                      <FamilyTreeBranch
+                        parents={childFamily}
+                        children={familyChildren}
+                        allMembers={allMembers}
+                        childrenMap={childrenMap}
+                        spouseMap={spouseMap}
+                        selectedMemberId={
+                          selectedMemberId
+                        }
+                        onMemberClick={
+                          onMemberClick
+                        }
+                        renderedIds={
+                          nextRenderedIds
+                        }
+                        collapsedFamilyIds={
+                          collapsedFamilyIds
+                        }
+                        onToggleCollapse={
+                          onToggleCollapse
+                        }
+                        showParents={false}
+                      />
+                    </>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </>
+      )}
     </div>
   );
 }
