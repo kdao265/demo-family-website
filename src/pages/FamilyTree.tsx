@@ -57,6 +57,7 @@ export default function FamilyTree() {
   const [errorMessage, setErrorMessage] = useState('');
 
   const [zoom, setZoom] = useState(1);
+
   const [pan, setPan] = useState({
     x: 0,
     y: 0,
@@ -82,6 +83,10 @@ export default function FamilyTree() {
 
   const treeRef =
     useRef<HTMLDivElement | null>(null);
+
+  /* =========================================================
+     LOAD FAMILY TREE DATA
+     ========================================================= */
 
   useEffect(() => {
     async function loadFamilyTree() {
@@ -199,6 +204,10 @@ export default function FamilyTree() {
     loadFamilyTree();
   }, []);
 
+  /* =========================================================
+     SELECTED MEMBER
+     ========================================================= */
+
   const selectedMember = useMemo(
     () =>
       members.find(
@@ -208,6 +217,10 @@ export default function FamilyTree() {
       ) ?? null,
     [members, selectedMemberId]
   );
+
+  /* =========================================================
+     CHILDREN MAP
+     ========================================================= */
 
   const childrenMap = useMemo(() => {
     const map = new Map<
@@ -240,6 +253,10 @@ export default function FamilyTree() {
     return map;
   }, [relationships]);
 
+  /* =========================================================
+     PARENT MAP
+     ========================================================= */
+
   const parentMap = useMemo(() => {
     const map = new Map<
       string,
@@ -270,6 +287,10 @@ export default function FamilyTree() {
 
     return map;
   }, [relationships]);
+
+  /* =========================================================
+     SPOUSE MAP
+     ========================================================= */
 
   const spouseMap = useMemo(() => {
     const map = new Map<
@@ -337,6 +358,10 @@ export default function FamilyTree() {
     return map;
   }, [members, couples]);
 
+  /* =========================================================
+     MEMBER CLICK
+     ========================================================= */
+
   const handleMemberClick = useCallback(
     (memberId: string) => {
       setSelectedMemberId((current) =>
@@ -348,82 +373,116 @@ export default function FamilyTree() {
     []
   );
 
+  /* =========================================================
+     FAMILY UNIT
+     ========================================================= */
+
   const getFamilyUnitId = useCallback(
     (memberIds: string[]) =>
-      [...memberIds].sort().join('|'),
+      [...memberIds]
+        .sort()
+        .join('|'),
     []
   );
 
-  const toggleFamilyUnit = useCallback(
-    (memberIds: string[]) => {
-      const familyId =
-        getFamilyUnitId(memberIds);
-
-      setCollapsedFamilyIds(
-        (current) => {
-          const next = new Set(
-            current
+  const toggleFamilyUnit =
+    useCallback(
+      (memberIds: string[]) => {
+        const familyId =
+          getFamilyUnitId(
+            memberIds
           );
 
-          if (next.has(familyId)) {
-            next.delete(familyId);
-          } else {
-            next.add(familyId);
-          }
+        setCollapsedFamilyIds(
+          (current) => {
+            const next = new Set(
+              current
+            );
 
-          return next;
+            if (
+              next.has(familyId)
+            ) {
+              next.delete(
+                familyId
+              );
+            } else {
+              next.add(
+                familyId
+              );
+            }
+
+            return next;
+          }
+        );
+      },
+      [getFamilyUnitId]
+    );
+
+  /* =========================================================
+     TREE HELPERS
+     ========================================================= */
+
+  const getChildrenOfParents = useCallback(
+    (parentIds: string[]) => {
+      const childIds =
+        new Set<string>();
+
+      for (const parentId of parentIds) {
+        const ids =
+          childrenMap.get(
+            parentId
+          ) ?? [];
+
+        for (const childId of ids) {
+          childIds.add(
+            childId
+          );
         }
-      );
+      }
+
+      return Array.from(childIds)
+        .map((id) =>
+          members.find(
+            (member) =>
+              member.id === id
+          )
+        )
+        .filter(
+          (
+            member
+          ): member is DisplayMember =>
+            Boolean(member)
+        );
     },
-    [getFamilyUnitId]
+    [childrenMap, members]
   );
 
-  function getChildrenOfParents(
-    parentIds: string[]
-  ) {
-    const childIds =
-      new Set<string>();
+  const getSpouses = useCallback(
+    (memberId: string) =>
+      spouseMap.get(
+        memberId
+      ) ?? [],
+    [spouseMap]
+  );
 
-    for (const parentId of parentIds) {
-      const ids =
-        childrenMap.get(parentId) ??
-        [];
-
-      for (const childId of ids) {
-        childIds.add(childId);
-      }
-    }
-
-    return Array.from(childIds)
-      .map((id) =>
-        members.find(
+  const getRootMembers =
+    useCallback(
+      () =>
+        members.filter(
           (member) =>
-            member.id === id
-        )
-      )
-      .filter(
-        (
-          member
-        ): member is DisplayMember =>
-          Boolean(member)
-      );
-  }
-
-  function getSpouses(
-    memberId: string
-  ) {
-    return spouseMap.get(memberId) ?? [];
-  }
-
-  function getRootMembers() {
-    return members.filter(
-      (member) =>
-        !parentMap.has(member.id)
+            !parentMap.has(
+              member.id
+            )
+        ),
+      [members, parentMap]
     );
-  }
 
-  const fitTreeToScreen = useCallback(
-    () => {
+  /* =========================================================
+     FIT TREE TO SCREEN
+     ========================================================= */
+
+  const fitTreeToScreen =
+    useCallback(() => {
       const canvas =
         canvasRef.current;
 
@@ -485,19 +544,24 @@ export default function FamilyTree() {
         Math.max(
           0.5,
           Number(
-            calculatedZoom.toFixed(2)
+            calculatedZoom.toFixed(
+              2
+            )
           )
         )
       );
 
       setZoom(nextZoom);
+
       setPan({
         x: 0,
         y: 0,
       });
-    },
-    []
-  );
+    }, []);
+
+  /* =========================================================
+     AUTO FIT
+     ========================================================= */
 
   useEffect(() => {
     if (
@@ -513,23 +577,30 @@ export default function FamilyTree() {
       });
 
     return () => {
-      cancelAnimationFrame(frame);
+      cancelAnimationFrame(
+        frame
+      );
     };
   }, [
     loading,
     members.length,
     relationships.length,
     couples.length,
-    collapsedFamilyIds,
     fitTreeToScreen,
   ]);
+
+  /* =========================================================
+     ZOOM
+     ========================================================= */
 
   function zoomIn() {
     setZoom((current) =>
       Math.min(
         2,
         Number(
-          (current + 0.1).toFixed(2)
+          (current + 0.1).toFixed(
+            2
+          )
         )
       )
     );
@@ -540,11 +611,17 @@ export default function FamilyTree() {
       Math.max(
         0.5,
         Number(
-          (current - 0.1).toFixed(2)
+          (current - 0.1).toFixed(
+            2
+          )
         )
       )
     );
   }
+
+  /* =========================================================
+     WHEEL ZOOM
+     ========================================================= */
 
   function handleWheel(
     event: React.WheelEvent<HTMLDivElement>
@@ -561,11 +638,17 @@ export default function FamilyTree() {
         2,
         Math.max(
           0.5,
-          Number(next.toFixed(2))
+          Number(
+            next.toFixed(2)
+          )
         )
       );
     });
   }
+
+  /* =========================================================
+     DRAG / PAN
+     ========================================================= */
 
   function handlePointerDown(
     event: React.PointerEvent<HTMLDivElement>
@@ -632,10 +715,14 @@ export default function FamilyTree() {
     }
   }
 
-  /*
-   * Nếu chưa có dữ liệu.
-   */
-  if (!loading && members.length === 0) {
+  /* =========================================================
+     EMPTY STATE
+     ========================================================= */
+
+  if (
+    !loading &&
+    members.length === 0
+  ) {
     return (
       <div className="pt-[72px] min-h-screen bg-surface">
         <section className="py-20 px-margin-mobile md:px-margin-desktop">
@@ -657,9 +744,10 @@ export default function FamilyTree() {
     );
   }
 
-  /*
-   * Loading.
-   */
+  /* =========================================================
+     LOADING
+     ========================================================= */
+
   if (loading) {
     return (
       <div className="pt-[72px] min-h-screen bg-surface flex items-center justify-center">
@@ -670,9 +758,10 @@ export default function FamilyTree() {
     );
   }
 
-  /*
-   * Error.
-   */
+  /* =========================================================
+     ERROR
+     ========================================================= */
+
   if (errorMessage) {
     return (
       <div className="pt-[72px] min-h-screen bg-surface flex items-center justify-center px-margin-mobile">
@@ -687,11 +776,16 @@ export default function FamilyTree() {
     );
   }
 
+  /* =========================================================
+     MAIN UI
+     ========================================================= */
+
   return (
     <div className="pt-[72px] min-h-screen bg-surface">
       {/* =====================================================
           HEADER
          ===================================================== */}
+
       <section className="py-16 px-margin-mobile md:px-margin-desktop bg-surface-container-low border-b border-outline/10">
         <div className="max-w-4xl mx-auto text-center">
           <span className="font-label-md text-primary uppercase tracking-[0.15em]">
@@ -716,9 +810,11 @@ export default function FamilyTree() {
       {/* =====================================================
           TREE SECTION
          ===================================================== */}
+
       <section className="py-section-gap px-margin-mobile md:px-margin-desktop">
         <div className="max-w-[1400px] mx-auto">
           {/* Section title */}
+
           <div className="text-center mb-8">
             <span className="font-label-md text-primary uppercase tracking-[0.15em]">
               Cây gia phả
@@ -732,6 +828,7 @@ export default function FamilyTree() {
           {/* =================================================
               TOOLBAR
              ================================================= */}
+
           <div className="flex justify-center mb-5">
             <div className="inline-flex items-center gap-1 bg-surface-container-lowest border border-outline/10 rounded-full p-1 shadow-sm">
               <button
@@ -781,6 +878,7 @@ export default function FamilyTree() {
           {/* =================================================
               CANVAS
              ================================================= */}
+
           <div
             ref={canvasRef}
             className={`relative h-[800px] md:h-[850px] overflow-hidden rounded-3xl border border-outline/10 bg-surface-container-low ${
@@ -789,9 +887,12 @@ export default function FamilyTree() {
                 : 'cursor-grab'
             }`}
             style={{
-              touchAction: 'none',
+              touchAction:
+                'none',
             }}
-            onWheel={handleWheel}
+            onWheel={
+              handleWheel
+            }
             onPointerDown={
               handlePointerDown
             }
@@ -806,6 +907,7 @@ export default function FamilyTree() {
             }
           >
             {/* Hint */}
+
             <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-20 px-4 py-2 rounded-full bg-surface-container-lowest/90 backdrop-blur-sm border border-outline/10 text-xs text-on-surface-variant shadow-sm">
               Kéo để di chuyển · Lăn chuột để phóng to
             </div>
@@ -813,6 +915,7 @@ export default function FamilyTree() {
             {/* =================================================
                 TREE
                ================================================= */}
+
             <div
               ref={treeRef}
               className="absolute left-1/2 top-1/2"
@@ -841,19 +944,14 @@ export default function FamilyTree() {
 
                     /*
                      * --------------------------------------------------
-                     * Xác định root thực sự.
+                     * Tìm root thực sự cần render.
                      *
-                     * Một root có thể kết nối tới root khác thông qua:
+                     * Nếu:
                      *
-                     * root
-                     *   ↓
-                     * child
-                     *   ↓
-                     * spouse
-                     *   ↓
-                     * root khác
+                     * A → C
+                     * C ♥ B
                      *
-                     * Root đã được kết nối sẽ không tạo cây riêng.
+                     * thì B không tạo một cây riêng.
                      * --------------------------------------------------
                      */
 
@@ -965,6 +1063,12 @@ export default function FamilyTree() {
                           )
                       );
 
+                    /*
+                     * --------------------------------------------------
+                     * Tạo family unit ở root.
+                     * --------------------------------------------------
+                     */
+
                     const rootUnits:
                       DisplayMember[][] =
                       [];
@@ -1020,7 +1124,9 @@ export default function FamilyTree() {
                             return (
                               <FamilyTreeBranch
                                 key={`root-unit-${index}`}
-                                parents={unit}
+                                parents={
+                                  unit
+                                }
                                 children={
                                   children
                                 }
@@ -1073,13 +1179,16 @@ export default function FamilyTree() {
           {/* =================================================
               SELECTED MEMBER
              ================================================= */}
+
           {selectedMember && (
             <div className="max-w-2xl mx-auto mt-8 bg-surface-container-low rounded-3xl p-8 border border-outline/10">
               <div className="text-center">
                 <Heart className="w-7 h-7 text-primary fill-current mx-auto mb-4" />
 
                 <h3 className="font-headline-md text-headline-md text-secondary mb-2">
-                  {selectedMember.name}
+                  {
+                    selectedMember.name
+                  }
                 </h3>
 
                 <p className="font-body-md text-on-surface-variant">
@@ -1111,10 +1220,14 @@ export default function FamilyTree() {
                     {selectedMember.hobbies.map(
                       (hobby) => (
                         <span
-                          key={hobby}
+                          key={
+                            hobby
+                          }
                           className="px-3 py-1.5 rounded-full bg-surface-container-lowest border border-outline/10 text-xs text-on-surface-variant"
                         >
-                          {hobby}
+                          {
+                            hobby
+                          }
                         </span>
                       )
                     )}
