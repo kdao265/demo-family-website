@@ -1,4 +1,10 @@
-import { Users, UserRound, GitBranch } from 'lucide-react';
+import {
+  Users,
+  UserRound,
+  GitBranch,
+  Images,
+  MessageSquare,
+} from 'lucide-react';
 import { Link } from 'react-router-dom';
 
 export default function AdminDashboard() {
@@ -65,6 +71,36 @@ export default function AdminDashboard() {
 
               <p className="font-body-md text-on-surface-variant">
                 Thiết lập quan hệ cha mẹ và con cái.
+              </p>
+            </Link>
+
+            <Link
+              to="/admin/moments"
+              className="bg-surface-container-lowest rounded-3xl border border-outline/10 p-7 hover:-translate-y-1 transition-transform"
+            >
+              <Images className="w-8 h-8 text-primary mb-5" />
+            
+              <h2 className="font-headline-md text-xl text-secondary mb-2">
+                Khoảnh khắc
+              </h2>
+            
+              <p className="font-body-md text-on-surface-variant">
+                Thêm, sửa và quản lý ảnh kỷ niệm của gia đình.
+              </p>
+            </Link>
+
+            <Link
+              to="/admin/guestbook"
+              className="bg-surface-container-lowest rounded-3xl border border-outline/10 p-7 hover:-translate-y-1 transition-transform"
+            >
+              <MessageSquare className="w-8 h-8 text-primary mb-5" />
+            
+              <h2 className="font-headline-md text-xl text-secondary mb-2">
+                Lưu bút
+              </h2>
+            
+              <p className="font-body-md text-on-surface-variant">
+                Xem và quản lý những lời nhắn dành cho gia đình.
               </p>
             </Link>
           </div>
