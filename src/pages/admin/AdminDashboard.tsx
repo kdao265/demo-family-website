@@ -9,103 +9,99 @@ import { Link } from 'react-router-dom';
 
 export default function AdminDashboard() {
   return (
-    <div className="pt-[72px] min-h-screen bg-surface">
-      <section className="py-14 px-margin-mobile md:px-margin-desktop bg-surface-container-low border-b border-outline/10">
-        <div className="max-w-container-max mx-auto">
-          <p className="font-label-md text-primary uppercase tracking-[0.15em]">
-            Quản trị
-          </p>
+    <div className="min-h-screen bg-surface">
+      {/* Header */}
+      <section className="px-6 md:px-10 py-8 border-b border-outline/10 bg-surface-container-low">
+        <p className="font-label-md text-primary uppercase tracking-[0.15em]">
+          Tổng quan
+        </p>
 
-          <h1 className="font-display-lg text-display-lg text-secondary mt-3">
-            Gia đình
-          </h1>
+        <h1 className="font-display-lg text-display-lg text-secondary mt-2">
+          Gia đình
+        </h1>
 
-          <p className="font-body-lg text-on-surface-variant max-w-2xl mt-4">
-            Quản lý các gia đình nhỏ, thành viên và mối quan hệ trong gia phả.
-          </p>
-        </div>
+        <p className="font-body-lg text-on-surface-variant mt-3 max-w-2xl">
+          Quản lý toàn bộ dữ liệu và nội dung của đại gia đình.
+        </p>
       </section>
 
-      <section className="py-section-gap px-margin-mobile md:px-margin-desktop">
-        <div className="max-w-container-max mx-auto">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <Link
-              to="/admin/families"
-              className="bg-surface-container-lowest rounded-3xl border border-outline/10 p-7 hover:-translate-y-1 transition-transform"
-            >
-              <Users className="w-8 h-8 text-primary mb-5" />
+      <section className="px-6 md:px-10 py-8">
+        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-5">
+          <DashboardCard
+            icon={<Users className="w-6 h-6" />}
+            title="Gia đình"
+            description="Quản lý các gia đình nhỏ."
+            path="/admin/families"
+          />
 
-              <h2 className="font-headline-md text-xl text-secondary mb-2">
-                Gia đình
-              </h2>
+          <DashboardCard
+            icon={<UserRound className="w-6 h-6" />}
+            title="Thành viên"
+            description="Thêm và chỉnh sửa thành viên."
+            path="/admin/members"
+          />
 
-              <p className="font-body-md text-on-surface-variant">
-                Tạo và quản lý các gia đình nhỏ.
-              </p>
-            </Link>
+          <DashboardCard
+            icon={<GitBranch className="w-6 h-6" />}
+            title="Quan hệ gia phả"
+            description="Thiết lập quan hệ huyết thống và hôn phối."
+            path="/admin/relationships"
+          />
 
-            <Link
-              to="/admin/members"
-              className="bg-surface-container-lowest rounded-3xl border border-outline/10 p-7 hover:-translate-y-1 transition-transform"
-            >
-              <UserRound className="w-8 h-8 text-primary mb-5" />
+          <DashboardCard
+            icon={<Images className="w-6 h-6" />}
+            title="Khoảnh khắc"
+            description="Quản lý ảnh kỷ niệm."
+            path="/admin/moments"
+          />
+        </div>
 
-              <h2 className="font-headline-md text-xl text-secondary mb-2">
-                Thành viên
-              </h2>
-
-              <p className="font-body-md text-on-surface-variant">
-                Thêm, sửa và quản lý thông tin thành viên.
-              </p>
-            </Link>
-
-            <Link
-              to="/admin/relationships"
-              className="bg-surface-container-lowest rounded-3xl border border-outline/10 p-7 hover:-translate-y-1 transition-transform"
-            >
-              <GitBranch className="w-8 h-8 text-primary mb-5" />
-
-              <h2 className="font-headline-md text-xl text-secondary mb-2">
-                Quan hệ gia phả
-              </h2>
-
-              <p className="font-body-md text-on-surface-variant">
-                Thiết lập quan hệ cha mẹ và con cái.
-              </p>
-            </Link>
-
-            <Link
-              to="/admin/moments"
-              className="bg-surface-container-lowest rounded-3xl border border-outline/10 p-7 hover:-translate-y-1 transition-transform"
-            >
-              <Images className="w-8 h-8 text-primary mb-5" />
-            
-              <h2 className="font-headline-md text-xl text-secondary mb-2">
-                Khoảnh khắc
-              </h2>
-            
-              <p className="font-body-md text-on-surface-variant">
-                Thêm, sửa và quản lý ảnh kỷ niệm của gia đình.
-              </p>
-            </Link>
-
-            <Link
-              to="/admin/guestbook"
-              className="bg-surface-container-lowest rounded-3xl border border-outline/10 p-7 hover:-translate-y-1 transition-transform"
-            >
-              <MessageSquare className="w-8 h-8 text-primary mb-5" />
-            
-              <h2 className="font-headline-md text-xl text-secondary mb-2">
-                Lưu bút
-              </h2>
-            
-              <p className="font-body-md text-on-surface-variant">
-                Xem và quản lý những lời nhắn dành cho gia đình.
-              </p>
-            </Link>
-          </div>
+        <div className="mt-5">
+          <DashboardCard
+            icon={<MessageSquare className="w-6 h-6" />}
+            title="Lưu bút"
+            description="Xem, duyệt và quản lý lời nhắn từ người thân."
+            path="/admin/guestbook"
+          />
         </div>
       </section>
     </div>
+  );
+}
+
+interface DashboardCardProps {
+  icon: React.ReactNode;
+  title: string;
+  description: string;
+  path: string;
+}
+
+function DashboardCard({
+  icon,
+  title,
+  description,
+  path,
+}: DashboardCardProps) {
+  return (
+    <Link
+      to={path}
+      className="group bg-surface-container-lowest rounded-2xl border border-outline/10 p-6 hover:-translate-y-1 hover:border-primary/20 transition-all family-card-shadow"
+    >
+      <div className="w-11 h-11 rounded-xl bg-primary/10 text-primary flex items-center justify-center mb-5">
+        {icon}
+      </div>
+
+      <h2 className="font-headline-md text-lg text-secondary">
+        {title}
+      </h2>
+
+      <p className="font-body-md text-on-surface-variant mt-2 leading-relaxed">
+        {description}
+      </p>
+
+      <div className="mt-5 text-primary text-sm font-medium group-hover:translate-x-1 transition-transform">
+        Quản lý →
+      </div>
+    </Link>
   );
 }
