@@ -1,8 +1,13 @@
-import { ArrowRight, Heart, Users, CalendarDays, Images } from 'lucide-react';
+import {
+  ArrowRight,
+  Heart,
+  Users,
+  CalendarDays,
+  Images,
+} from 'lucide-react';
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
-import { homeGallery } from '../data';
 
 interface FamilyMember {
   id: string;
@@ -12,9 +17,21 @@ interface FamilyMember {
   avatar_url: string | null;
 }
 
+interface Moment {
+  id: string;
+  title: string;
+  description: string | null;
+  image_url: string | null;
+  category: string | null;
+  is_favorite: boolean;
+  created_at: string;
+}
+
 export default function Home() {
   const [members, setMembers] = useState<FamilyMember[]>([]);
   const [loadingMembers, setLoadingMembers] = useState(true);
+  const [moments, setMoments] = useState<Moment[]>([]);
+  const [loadingMoments, setLoadingMoments] = useState(true);
 
   useEffect(() => {
     async function loadMembers() {
@@ -44,6 +61,44 @@ export default function Home() {
     loadMembers();
   }, []);
 
+  useEffect(() => {
+    async function loadMoments() {
+      setLoadingMoments(true);
+  
+      const { data, error } = await supabase
+        .from('moments')
+        .select(
+          'id, title, description, image_url, category, is_favorite, created_at'
+        )
+        .order('created_at', {
+          ascending: false,
+        });
+  
+      if (error) {
+        console.error(
+          'Load homepage moments error:',
+          error
+        );
+  
+        setMoments([]);
+      } else {
+        setMoments(data ?? []);
+      }
+  
+      setLoadingMoments(false);
+    }
+  
+    loadMoments();
+  }, []);
+
+  const heroMoment = moments.find(
+    (moment) => moment.image_url
+  ) ?? null;
+  
+  const storyMoment =
+    moments.find((moment) => moment.image_url && moment.is_favorite) ??
+    heroMoment;
+
   return (
     <div className="pt-[72px]">
       {/* =========================================================
@@ -52,11 +107,15 @@ export default function Home() {
       <section className="relative min-h-[calc(100vh-72px)] flex items-center overflow-hidden">
         {/* Background image */}
         <div className="absolute inset-0">
-          <img
-            src={homeGallery[0]?.imageUrl}
-            alt={homeGallery[0]?.imageAlt || 'Khoảnh khắc gia đình'}
-            className="w-full h-full object-cover"
-          />
+          {heroMoment?.image_url ? (
+            <img
+              src={heroMoment.image_url}
+              alt={heroMoment.title}
+              className="w-full h-full object-cover"
+            />
+          ) : (
+            <div className="w-full h-full bg-surface-container-low" />
+          )}
 
           {/* Warm overlays */}
           <div className="absolute inset-0 bg-on-surface/35"></div>
@@ -284,7 +343,7 @@ export default function Home() {
               </div>
 
               <p className="font-headline-md text-3xl text-secondary mb-2">
-                {homeGallery.length}
+                {moments.length}
               </p>
 
               <p className="font-body-md text-on-surface-variant">
@@ -336,15 +395,19 @@ export default function Home() {
               <div className="absolute -inset-4 rounded-[2rem] bg-primary/10 rotate-2"></div>
 
               <div className="relative rounded-[2rem] overflow-hidden shadow-xl">
-                <img
-                  src={homeGallery[4]?.imageUrl || homeGallery[0]?.imageUrl}
-                  alt={
-                    homeGallery[4]?.imageAlt ||
-                    homeGallery[0]?.imageAlt ||
-                    'Gia đình'
-                  }
-                  className="w-full h-[420px] object-cover"
-                />
+                {storyMoment?.image_url ? (
+                  <img
+                    src={storyMoment.image_url}
+                    alt={storyMoment.title}
+                    className="w-full h-[420px] object-cover"
+                  />
+                ) : (
+                  <div className="w-full h-[420px] bg-surface-container-low flex items-center justify-center">
+                    <p className="font-body-md text-on-surface-variant">
+                      Chưa có hình ảnh
+                    </p>
+                  </div>
+                )}
               </div>
             </div>
           </div>
@@ -379,7 +442,62 @@ export default function Home() {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-12 gap-4">
-            {homeGallery.slice(0, 5).map((photo, index) => {
+            {loadingMoments ? (
+              <div className="col-span-12 text-center py-12">
+                <p className="font-body-md text-on-surface-variant">
+                  Đang tải khoảnh khắc...
+                </p>
+              </div>
+            ) : moments.length === 0 ? (
+              <div className="col-span-12 text-center py-12">
+                <p className="font-body-md text-on-surface-variant">
+                  Chưa có khoảnh khắc nào được lưu giữ.
+                </p>
+              </div>
+            ) : (
+              moments.slice(0, 5).map((moment, index) => {
+                const layoutClass =
+                  index === 0
+                    ? 'md:col-span-6 md:row-span-2 h-[420px]'
+                    : 'md:col-span-3 h-[200px]';
+            
+                return (
+                  <Link
+                    to="/moments"
+                    key={moment.id}
+                    className={`group relative rounded-2xl overflow-hidden ${layoutClass}`}
+                  >
+                    {moment.image_url ? (
+                      <img
+                        src={moment.image_url}
+                        alt={moment.title}
+                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
+                      />
+                    ) : (
+                      <div className="w-full h-full bg-surface-container-low flex items-center justify-center">
+                        <span className="font-body-md text-on-surface-variant">
+                          Chưa có ảnh
+                        </span>
+                      </div>
+                    )}
+            
+                    <div className="absolute inset-0 bg-gradient-to-t from-on-surface/75 via-transparent to-transparent" />
+            
+                    <div className="absolute left-5 right-5 bottom-5">
+                      <p className="text-on-primary font-label-md text-sm">
+                        {moment.title}
+                      </p>
+            
+                      {moment.category && (
+                        <p className="text-on-primary/70 text-xs mt-1">
+                          {moment.category}
+                        </p>
+                      )}
+                    </div>
+                  </Link>
+                );
+              })
+            )}
               const layoutClass =
                 index === 0
                   ? 'md:col-span-6 md:row-span-2 h-[420px]'
