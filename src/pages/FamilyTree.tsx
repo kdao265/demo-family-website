@@ -657,6 +657,7 @@ export default function FamilyTree() {
                                   }
                                   collapsedFamilyIds={collapsedFamilyIds}
                                   onToggleCollapse={toggleFamilyUnit}
+                                  showParents={true}
                                 />
                               );
                             }
