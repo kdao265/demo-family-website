@@ -222,6 +222,35 @@ export default function FamilyTree() {
     );
   }
 
+  function getChildrenOfParents(parentIds: string[]) {
+    const childIds = new Set<string>();
+  
+    for (const parentId of parentIds) {
+      const ids = childrenMap.get(parentId) ?? [];
+  
+      for (const childId of ids) {
+        childIds.add(childId);
+      }
+    }
+  
+    return Array.from(childIds)
+      .map((id) => members.find((member) => member.id === id))
+      .filter(
+        (member): member is DisplayMember =>
+          Boolean(member)
+      );
+  }
+  
+  function getSpouses(memberId: string) {
+    return spouseMap.get(memberId) ?? [];
+  }
+  
+  function getRootMembers() {
+    return members.filter(
+      (member) => !parentMap.has(member.id)
+    );
+  }
+
   return (
     <div className="pt-[72px] min-h-screen bg-surface">
       <section className="py-16 px-margin-mobile md:px-margin-desktop bg-surface-container-low border-b border-outline/10">
@@ -264,68 +293,59 @@ export default function FamilyTree() {
           ) : (
             <div className="space-y-16">
               {(() => {
-                const memberMap = new Map(
-                  members.map((member) => [member.id, member])
+                const rootMembers = getRootMembers();
+              
+                const rootIds = new Set(
+                  rootMembers.map((member) => member.id)
                 );
-
-                const rootMembers = members.filter(
-                  (member) => !parentMap.has(member.id)
-                );
-
-                const rootCouples = couples
-                  .map((couple) => {
-                    const person1 = memberMap.get(couple.person1_id);
-                    const person2 = memberMap.get(couple.person2_id);
-
-                    if (!person1 || !person2) {
-                      return null;
-                    }
-
-                    return [person1, person2] as DisplayMember[];
-                  })
-                  .filter(
-                    (couple): couple is DisplayMember[] =>
-                      couple !== null &&
-                      rootMembers.some(
-                        (member) => member.id === couple[0].id
-                      ) &&
-                      rootMembers.some(
-                        (member) => member.id === couple[1].id
-                      )
+              
+                /*
+                 * Tạo các family unit ở thế hệ đầu tiên.
+                 *
+                 * Nếu A và B là vợ/chồng
+                 * và cả hai đều không có parent
+                 * → [A, B] là một unit.
+                 */
+              
+                const processedRootIds = new Set<string>();
+              
+                const rootUnits: DisplayMember[][] = [];
+              
+                for (const root of rootMembers) {
+                  if (processedRootIds.has(root.id)) {
+                    continue;
+                  }
+              
+                  const spouses = getSpouses(root.id).filter(
+                    (spouse) => rootIds.has(spouse.id)
                   );
-
-                const usedRootIds = new Set<string>();
-
-                for (const couple of rootCouples) {
-                  usedRootIds.add(couple[0].id);
-                  usedRootIds.add(couple[1].id);
+              
+                  const unit = [root];
+              
+                  for (const spouse of spouses) {
+                    if (!processedRootIds.has(spouse.id)) {
+                      unit.push(spouse);
+                    }
+                  }
+              
+                  for (const member of unit) {
+                    processedRootIds.add(member.id);
+                  }
+              
+                  rootUnits.push(unit);
                 }
-
-                const singleRoots = rootMembers.filter(
-                  (member) => !usedRootIds.has(member.id)
-                );
-
+              
                 return (
                   <>
-                    {rootCouples.map((couple, index) => {
-                      const childIds = new Set<string>();
-
-                      for (const parent of couple) {
-                        const ids = childrenMap.get(parent.id) ?? [];
-
-                        for (const childId of ids) {
-                          childIds.add(childId);
-                        }
-                      }
-
-                      const children = Array.from(childIds)
-                        .map((id) => memberMap.get(id))
-                        .filter(Boolean) as DisplayMember[];
-
+                    {rootUnits.map((unit, index) => {
+                      const children = getChildrenOfParents(
+                        unit.map((member) => member.id)
+                      );
+              
                       return (
                         <FamilyTreeBranch
-                          key={`couple-${index}`}
-                          parents={couple}
+                          key={`root-unit-${index}`}
+                          parents={unit}
                           children={children}
                           allMembers={members}
                           childrenMap={childrenMap}
@@ -334,32 +354,9 @@ export default function FamilyTree() {
                           onMemberClick={handleMemberClick}
                           renderedIds={
                             new Set(
-                              couple.map((member) => member.id)
+                              unit.map((member) => member.id)
                             )
                           }
-                        />
-                      );
-                    })}
-
-                    {singleRoots.map((root) => {
-                      const childIds =
-                        childrenMap.get(root.id) ?? [];
-
-                      const children = childIds
-                        .map((id) => memberMap.get(id))
-                        .filter(Boolean) as DisplayMember[];
-
-                      return (
-                        <FamilyTreeBranch
-                          key={`root-${root.id}`}
-                          parents={[root]}
-                          children={children}
-                          allMembers={members}
-                          childrenMap={childrenMap}
-                          spouseMap={spouseMap}
-                          selectedMemberId={selectedMemberId}
-                          onMemberClick={handleMemberClick}
-                          renderedIds={new Set([root.id])}
                         />
                       );
                     })}
