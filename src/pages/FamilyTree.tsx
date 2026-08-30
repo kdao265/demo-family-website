@@ -1,5 +1,5 @@
 import { Heart } from 'lucide-react';
-import React, { useEffect, useMemo, useState } from 'react';
+import React.useRef, { useEffect, useMemo, useState } from 'react';
 import FamilyMemberCard from '../components/family/FamilyMemberCard';
 import FamilyTreeBranch from '../components/family/FamilyTreeBranch';
 import { supabase } from '../lib/supabase';
@@ -51,6 +51,20 @@ export default function FamilyTree() {
 
   const [loading, setLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState('');
+
+  const [zoom, setZoom] = useState(1);
+  const [pan, setPan] = useState({ x: 0, y: 0 });
+  const [isDragging, setIsDragging] = useState(false);
+  
+  const dragStart = React.useRef({
+    x: 0,
+    y: 0,
+  });
+  
+  const panStart = React.useRef({
+    x: 0,
+    y: 0,
+  });
 
   useEffect(() => {
     async function loadFamilyTree() {
@@ -251,6 +265,103 @@ export default function FamilyTree() {
     );
   }
 
+  function zoomIn() {
+    setZoom((current) =>
+      Math.min(2, Number((current + 0.1).toFixed(2)))
+    );
+  }
+  
+  function zoomOut() {
+    setZoom((current) =>
+      Math.max(0.5, Number((current - 0.1).toFixed(2)))
+    );
+  }
+  
+  function resetView() {
+    setZoom(1);
+    setPan({ x: 0, y: 0 });
+  }
+  
+  function handleWheel(
+    event: React.WheelEvent<HTMLDivElement>
+  ) {
+    event.preventDefault();
+  
+    setZoom((current) => {
+      const next =
+        event.deltaY < 0
+          ? current + 0.1
+          : current - 0.1;
+  
+      return Math.min(
+        2,
+        Math.max(
+          0.5,
+          Number(next.toFixed(2))
+        )
+      );
+    });
+  }
+  
+  function handlePointerDown(
+    event: React.PointerEvent<HTMLDivElement>
+  ) {
+    if (event.button !== 0) {
+      return;
+    }
+  
+    setIsDragging(true);
+  
+    dragStart.current = {
+      x: event.clientX,
+      y: event.clientY,
+    };
+  
+    panStart.current = {
+      x: pan.x,
+      y: pan.y,
+    };
+  
+    event.currentTarget.setPointerCapture(
+      event.pointerId
+    );
+  }
+  
+  function handlePointerMove(
+    event: React.PointerEvent<HTMLDivElement>
+  ) {
+    if (!isDragging) {
+      return;
+    }
+  
+    const deltaX =
+      event.clientX - dragStart.current.x;
+  
+    const deltaY =
+      event.clientY - dragStart.current.y;
+  
+    setPan({
+      x: panStart.current.x + deltaX,
+      y: panStart.current.y + deltaY,
+    });
+  }
+  
+  function handlePointerUp(
+    event: React.PointerEvent<HTMLDivElement>
+  ) {
+    setIsDragging(false);
+  
+    if (
+      event.currentTarget.hasPointerCapture(
+        event.pointerId
+      )
+    ) {
+      event.currentTarget.releasePointerCapture(
+        event.pointerId
+      );
+    }
+  }
+
   return (
     <div className="pt-[72px] min-h-screen bg-surface">
       <section className="py-16 px-margin-mobile md:px-margin-desktop bg-surface-container-low border-b border-outline/10">
@@ -272,127 +383,200 @@ export default function FamilyTree() {
         </div>
       </section>
 
-      <section className="py-section-gap px-margin-mobile md:px-margin-desktop overflow-x-auto">
-        <div className="max-w-7xl mx-auto min-w-[900px]">
-          <div className="text-center mb-12">
+      <section className="py-section-gap px-margin-mobile md:px-margin-desktop">
+        <div className="max-w-[1400px] mx-auto">
+          <div className="text-center mb-8">
             <span className="font-label-md text-primary uppercase tracking-[0.15em]">
               Cây gia phả
             </span>
-
+      
             <h2 className="font-headline-lg text-headline-lg text-secondary mt-3">
               Các thế hệ
             </h2>
           </div>
-
-          {members.length === 0 ? (
-            <div className="text-center py-16 bg-surface-container-low rounded-3xl border border-outline/10">
-              <p className="font-body-lg text-on-surface-variant">
-                Chưa có dữ liệu gia phả.
-              </p>
+      
+          {/* Toolbar */}
+          <div className="flex justify-center mb-5">
+            <div className="inline-flex items-center gap-1 bg-surface-container-lowest border border-outline/10 rounded-full p-1 shadow-sm">
+              <button
+                type="button"
+                onClick={zoomOut}
+                className="w-10 h-10 rounded-full hover:bg-surface-container-low flex items-center justify-center text-secondary transition-colors"
+                aria-label="Thu nhỏ"
+              >
+                −
+              </button>
+      
+              <button
+                type="button"
+                onClick={resetView}
+                className="min-w-[70px] h-10 px-3 rounded-full hover:bg-surface-container-low flex items-center justify-center text-sm font-medium text-secondary transition-colors"
+              >
+                {Math.round(zoom * 100)}%
+              </button>
+      
+              <button
+                type="button"
+                onClick={zoomIn}
+                className="w-10 h-10 rounded-full hover:bg-surface-container-low flex items-center justify-center text-secondary transition-colors"
+                aria-label="Phóng to"
+              >
+                +
+              </button>
+      
+              <div className="w-px h-5 bg-outline/20 mx-1" />
+      
+              <button
+                type="button"
+                onClick={resetView}
+                className="w-10 h-10 rounded-full hover:bg-surface-container-low flex items-center justify-center text-secondary transition-colors"
+                aria-label="Đưa cây về vị trí ban đầu"
+              >
+                ↺
+              </button>
             </div>
-          ) : (
-            <div className="space-y-16">
-              {(() => {
-                const rootMembers = getRootMembers();
-              
-                const rootIds = new Set(
-                  rootMembers.map((member) => member.id)
-                );
-              
-                /*
-                 * Tạo các family unit ở thế hệ đầu tiên.
-                 *
-                 * Nếu A và B là vợ/chồng
-                 * và cả hai đều không có parent
-                 * → [A, B] là một unit.
-                 */
-              
-                const processedRootIds = new Set<string>();
-              
-                const rootUnits: DisplayMember[][] = [];
-              
-                for (const root of rootMembers) {
-                  if (processedRootIds.has(root.id)) {
-                    continue;
-                  }
-              
-                  const spouses = getSpouses(root.id).filter(
-                    (spouse) => rootIds.has(spouse.id)
-                  );
-              
-                  const unit = [root];
-              
-                  for (const spouse of spouses) {
-                    if (!processedRootIds.has(spouse.id)) {
-                      unit.push(spouse);
-                    }
-                  }
-              
-                  for (const member of unit) {
-                    processedRootIds.add(member.id);
-                  }
-              
-                  rootUnits.push(unit);
-                }
-              
-                return (
-                  <>
-                    {rootUnits.map((unit, index) => {
-                      const children = getChildrenOfParents(
-                        unit.map((member) => member.id)
+          </div>
+      
+          {/* Canvas */}
+          <div
+            className={`relative h-[750px] overflow-hidden rounded-3xl border border-outline/10 bg-surface-container-low ${
+              isDragging
+                ? 'cursor-grabbing'
+                : 'cursor-grab'
+            }`}
+            onWheel={handleWheel}
+            onPointerDown={handlePointerDown}
+            onPointerMove={handlePointerMove}
+            onPointerUp={handlePointerUp}
+            onPointerCancel={handlePointerUp}
+          >
+            {/* Hướng dẫn */}
+            <div className="absolute top-4 left-1/2 -translate-x-1/2 z-20 px-4 py-2 rounded-full bg-surface-container-lowest/90 backdrop-blur-sm border border-outline/10 text-xs text-on-surface-variant shadow-sm">
+              Kéo để di chuyển · Lăn chuột để phóng to
+            </div>
+      
+            {/* Tree */}
+            <div
+              className="absolute left-1/2 top-1/2"
+              style={{
+                transform: `translate(
+                  calc(-50% + ${pan.x}px),
+                  calc(-50% + ${pan.y}px)
+                ) scale(${zoom})`,
+                transformOrigin: 'center center',
+              }}
+            >
+              <div className="min-w-[900px]">
+                {members.length === 0 ? (
+                  <div className="text-center py-16 bg-surface-container-low rounded-3xl border border-outline/10">
+                    <p className="font-body-lg text-on-surface-variant">
+                      Chưa có dữ liệu gia phả.
+                    </p>
+                  </div>
+                ) : (
+                  <div className="space-y-16">
+                    {(() => {
+                      const rootMembers =
+                        getRootMembers();
+      
+                      const rootIds = new Set(
+                        rootMembers.map(
+                          (member) => member.id
+                        )
                       );
-              
-                      return (
-                        <FamilyTreeBranch
-                          key={`root-unit-${index}`}
-                          parents={unit}
-                          children={children}
-                          allMembers={members}
-                          childrenMap={childrenMap}
-                          spouseMap={spouseMap}
-                          selectedMemberId={selectedMemberId}
-                          onMemberClick={handleMemberClick}
-                          renderedIds={
-                            new Set(
-                              unit.map((member) => member.id)
+      
+                      const processedRootIds =
+                        new Set<string>();
+      
+                      const rootUnits:
+                        DisplayMember[][] = [];
+      
+                      for (const root of rootMembers) {
+                        if (
+                          processedRootIds.has(
+                            root.id
+                          )
+                        ) {
+                          continue;
+                        }
+      
+                        const spouses =
+                          getSpouses(root.id).filter(
+                            (spouse) =>
+                              rootIds.has(spouse.id)
+                          );
+      
+                        const unit = [root];
+      
+                        for (const spouse of spouses) {
+                          if (
+                            !processedRootIds.has(
+                              spouse.id
                             )
+                          ) {
+                            unit.push(spouse);
                           }
-                        />
+                        }
+      
+                        for (const member of unit) {
+                          processedRootIds.add(
+                            member.id
+                          );
+                        }
+      
+                        rootUnits.push(unit);
+                      }
+      
+                      return (
+                        <>
+                          {rootUnits.map(
+                            (unit, index) => {
+                              const children =
+                                getChildrenOfParents(
+                                  unit.map(
+                                    (member) =>
+                                      member.id
+                                  )
+                                );
+      
+                              return (
+                                <FamilyTreeBranch
+                                  key={`root-unit-${index}`}
+                                  parents={unit}
+                                  children={children}
+                                  allMembers={members}
+                                  childrenMap={
+                                    childrenMap
+                                  }
+                                  spouseMap={
+                                    spouseMap
+                                  }
+                                  selectedMemberId={
+                                    selectedMemberId
+                                  }
+                                  onMemberClick={
+                                    handleMemberClick
+                                  }
+                                  renderedIds={
+                                    new Set(
+                                      unit.map(
+                                        (member) =>
+                                          member.id
+                                      )
+                                    )
+                                  }
+                                />
+                              );
+                            }
+                          )}
+                        </>
                       );
-                    })}
-                  </>
-                );
-              })()}
-            </div>
-          )}
-
-          {selectedMember && (
-            <div className="max-w-2xl mx-auto mt-12 bg-surface-container-low rounded-3xl p-8 border border-outline/10">
-              <div className="text-center">
-                <Heart className="w-7 h-7 text-primary fill-current mx-auto mb-4" />
-
-                <h3 className="font-headline-md text-headline-md text-secondary mb-2">
-                  {selectedMember.name}
-                </h3>
-
-                <p className="font-body-md text-on-surface-variant">
-                  Sinh ngày {selectedMember.birthDate}
-                </p>
-
-                {selectedMember.relation && (
-                  <p className="font-body-md text-primary mt-2">
-                    {selectedMember.relation}
-                  </p>
-                )}
-
-                {selectedMember.shortBio && (
-                  <p className="font-body-md text-on-surface-variant mt-4 leading-relaxed">
-                    {selectedMember.shortBio}
-                  </p>
+                    })()}
+                  </div>
                 )}
               </div>
             </div>
-          )}
+          </div>
         </div>
       </section>
     </div>
