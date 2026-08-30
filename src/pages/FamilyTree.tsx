@@ -73,6 +73,9 @@ export default function FamilyTree() {
     y: 0,
   });
 
+  const canvasRef = useRef<HTMLDivElement | null>(null);
+  const treeRef = useRef<HTMLDivElement | null>(null);
+
   useEffect(() => {
     async function loadFamilyTree() {
       setLoading(true);
@@ -304,8 +307,80 @@ export default function FamilyTree() {
     );
   }
   
-  function resetView() {
-    setZoom(1);
+  function fitTreeToScreen() {
+    const canvas = canvasRef.current;
+    const tree = treeRef.current;
+  
+    if (!canvas || !tree) {
+      return;
+    }
+  
+    const canvasWidth = canvas.clientWidth;
+    const canvasHeight = canvas.clientHeight;
+  
+    const treeWidth = tree.offsetWidth;
+    const treeHeight = tree.offsetHeight;
+  
+    if (
+      canvasWidth <= 0 ||
+      canvasHeight <= 0 ||
+      treeWidth <= 0 ||
+      treeHeight <= 0
+    ) {
+      return;
+    }
+
+    useEffect(() => {
+      if (
+        loading ||
+        members.length === 0
+      ) {
+        return;
+      }
+    
+      const frame = requestAnimationFrame(() => {
+        fitTreeToScreen();
+      });
+    
+      return () => {
+        cancelAnimationFrame(frame);
+      };
+    }, [
+      loading,
+      members.length,
+      relationships.length,
+      couples.length,
+    ]);
+  
+    const horizontalPadding = 80;
+    const verticalPadding = 80;
+  
+    const availableWidth =
+      canvasWidth - horizontalPadding;
+  
+    const availableHeight =
+      canvasHeight - verticalPadding;
+  
+    const widthRatio =
+      availableWidth / treeWidth;
+  
+    const heightRatio =
+      availableHeight / treeHeight;
+  
+    const nextZoom = Math.min(
+      2,
+      Math.max(
+        0.5,
+        Number(
+          Math.min(
+            widthRatio,
+            heightRatio
+          ).toFixed(2)
+        )
+      )
+    );
+  
+    setZoom(nextZoom);
     setPan({ x: 0, y: 0 });
   }
   
@@ -434,13 +509,12 @@ export default function FamilyTree() {
                 −
               </button>
       
-              <button
-                type="button"
-                onClick={resetView}
-                className="min-w-[70px] h-10 px-3 rounded-full hover:bg-surface-container-low flex items-center justify-center text-sm font-medium text-secondary transition-colors"
+              <div
+                className="min-w-[70px] h-10 px-3 rounded-full flex items-center justify-center text-sm font-medium text-secondary"
+                aria-label="Mức thu phóng hiện tại"
               >
                 {Math.round(zoom * 100)}%
-              </button>
+              </div>
       
               <button
                 type="button"
@@ -455,9 +529,10 @@ export default function FamilyTree() {
       
               <button
                 type="button"
-                onClick={resetView}
+                onClick={fitTreeToScreen}
                 className="w-10 h-10 rounded-full hover:bg-surface-container-low flex items-center justify-center text-secondary transition-colors"
-                aria-label="Đưa cây về vị trí ban đầu"
+                aria-label="Đưa toàn bộ cây vừa với màn hình"
+                title="Vừa màn hình"
               >
                 ↺
               </button>
@@ -466,6 +541,7 @@ export default function FamilyTree() {
       
           {/* Canvas */}
           <div
+            ref={canvasRef}
             className={`relative h-[800px] md:h-[850px] overflow-hidden rounded-3xl border border-outline/10 bg-surface-container-low ${
               isDragging
                 ? 'cursor-grabbing'
@@ -484,6 +560,7 @@ export default function FamilyTree() {
       
             {/* Tree */}
             <div
+              ref={treeRef}
               className="absolute left-1/2 top-1/2"
               style={{
                 transform: `translate(
