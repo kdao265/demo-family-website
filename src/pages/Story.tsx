@@ -98,17 +98,20 @@ export default function Story() {
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
           {coreValues.map((value) => {
-            const Icon = value.iconName === 'Heart' ? Heart : value.iconName === 'Award' ? Heart /* replace with Lucide icon */ : Heart;
-            // Using Heart for all since dynamic lucide-react imports without mapping are tricky. Let's fix this inside data mapping or here.
-            // Wait, we can import them: import { Heart, Award, BookOpen } from 'lucide-react'
-            // For now, I'll just conditionally render based on iconName string.
             return (
               <div key={value.id} className="text-center p-8 bg-surface rounded-2xl border border-outline/10 family-card-shadow hover:-translate-y-2 transition-transform duration-300">
                 <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-6 text-primary">
-                  {/* Since I didn't import Award and BookOpen yet, I'll update the imports. Wait, I didn't import them. I'll just use icon placeholders or update later. */}
-                  {value.iconName === 'Heart' && <Heart className="w-8 h-8" />}
-                  {value.iconName === 'Award' && <Award className="w-8 h-8" />}
-                  {value.iconName === 'BookOpen' && <BookOpen className="w-8 h-8" />}
+                  {value.iconName === 'Heart' && (
+                    <Heart className="w-8 h-8" />
+                  )}
+                  
+                  {value.iconName === 'Award' && (
+                    <Award className="w-8 h-8" />
+                  )}
+                  
+                  {value.iconName === 'BookOpen' && (
+                    <BookOpen className="w-8 h-8" />
+                  )}
                 </div>
                 <h3 className="font-headline-md text-headline-md text-on-surface mb-4">{value.title}</h3>
                 <p className="font-body-md text-on-surface-variant leading-relaxed">
