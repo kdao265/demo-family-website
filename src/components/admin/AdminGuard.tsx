@@ -39,7 +39,7 @@ export default function AdminGuard({ children }: AdminGuardProps) {
 
   if (loading) {
     return (
-      <div className="pt-[72px] min-h-screen bg-surface flex items-center justify-center">
+      <div className="min-h-screen bg-surface flex items-center justify-center">
         <p className="font-body-md text-on-surface-variant">
           Đang kiểm tra quyền truy cập...
         </p>
