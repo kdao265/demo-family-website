@@ -36,62 +36,93 @@ export default function FamilyTreeBranch({
     allMembers.map((member) => [member.id, member])
   );
 
-  const visibleChildren = children.filter(
-    (child) => !renderedIds.has(child.id)
-  );
-
-  function getAvailableSpouse(member: Member) {
+  /*
+   * --------------------------------------------------
+   * Lấy toàn bộ spouse hợp lệ của một người.
+   * Không chỉ lấy người đầu tiên.
+   * --------------------------------------------------
+   */
+  function getAvailableSpouses(member: Member) {
     const spouses = spouseMap.get(member.id) ?? [];
 
-    return spouses.find(
+    return spouses.filter(
       (spouse) =>
         spouse.id !== member.id &&
         !renderedIds.has(spouse.id)
     );
   }
 
-  function getChildrenOfCouple(
-    person1: Member,
-    person2?: Member
+  /*
+   * --------------------------------------------------
+   * Lấy toàn bộ con của một family unit.
+   *
+   * Ví dụ:
+   * A + B
+   *   ↓
+   * C, D
+   *
+   * thì children sẽ lấy con của A + con của B,
+   * đồng thời loại trùng.
+   * --------------------------------------------------
+   */
+  function getChildrenOfFamily(
+    parentList: Member[]
   ) {
     const childIds = new Set<string>();
 
-    const ids1 = childrenMap.get(person1.id) ?? [];
+    for (const parent of parentList) {
+      const ids = childrenMap.get(parent.id) ?? [];
 
-    for (const childId of ids1) {
-      childIds.add(childId);
-    }
-
-    if (person2) {
-      const ids2 = childrenMap.get(person2.id) ?? [];
-
-      for (const childId of ids2) {
+      for (const childId of ids) {
         childIds.add(childId);
       }
     }
 
     return Array.from(childIds)
       .map((id) => memberMap.get(id))
-      .filter(Boolean)
-      .filter((member) => !renderedIds.has(member!.id)) as Member[];
+      .filter((member): member is Member => Boolean(member))
+      .filter(
+        (member) => !renderedIds.has(member.id)
+      );
   }
+
+  /*
+   * --------------------------------------------------
+   * Tránh trường hợp một người con đã xuất hiện
+   * cùng một family unit khác.
+   * --------------------------------------------------
+   */
+  const visibleChildren = children.filter(
+    (child) => !renderedIds.has(child.id)
+  );
 
   return (
     <div className="flex flex-col items-center">
-      {/* Cha / mẹ */}
+      {/* =================================================
+          FAMILY UNIT — CHA / MẸ
+         ================================================= */}
       <div className="flex items-center justify-center gap-4 md:gap-6">
         {parents.map((parent, index) => (
-          <div key={parent.id} className="relative">
+          <div
+            key={parent.id}
+            className="relative"
+          >
             <FamilyMemberCard
               member={parent}
-              isSelected={selectedMemberId === parent.id}
-              onClick={() => onMemberClick(parent.id)}
+              isSelected={
+                selectedMemberId === parent.id
+              }
+              onClick={() =>
+                onMemberClick(parent.id)
+              }
             />
 
             {index < parents.length - 1 && (
               <div className="absolute top-1/2 -right-4 md:-right-5 -translate-y-1/2">
                 <div className="w-8 h-8 rounded-full bg-surface-container-highest border border-primary/20 flex items-center justify-center">
-                  <span className="text-primary text-sm">♥</span>
+                  <span className="text-primary text-sm">
+                    ♥
+                  </span>
                 </div>
               </div>
             )}
@@ -99,29 +130,50 @@ export default function FamilyTreeBranch({
         ))}
       </div>
 
+      {/* =================================================
+          CHILDREN
+         ================================================= */}
       {visibleChildren.length > 0 && (
         <>
-          {/* Đường dọc */}
+          {/* Dọc từ family unit xuống */}
           <div className="w-px h-12 bg-primary/25" />
 
-          {/* Đường ngang */}
+          {/* Ngang nối các child */}
           {visibleChildren.length > 1 && (
             <div className="relative w-[75%] max-w-4xl h-6">
               <div className="absolute left-[8%] right-[8%] top-0 border-t border-primary/25" />
             </div>
           )}
 
-          {/* Các gia đình con */}
+          {/* Các family unit con */}
           <div className="flex justify-center gap-8 md:gap-12 flex-wrap">
             {visibleChildren.map((child) => {
-              const spouse = getAvailableSpouse(child);
+              /*
+               * Một child có thể có nhiều spouse.
+               *
+               * Hiện tại ta hỗ trợ tất cả spouse chưa render,
+               * nhưng mỗi family branch sẽ lấy spouse đầu tiên
+               * để tránh làm cây nhân bản vô hạn.
+               */
+              const availableSpouses =
+                getAvailableSpouses(child);
 
-              const familyChildren = getChildrenOfCouple(
-                child,
-                spouse
+              const spouse =
+                availableSpouses[0] ?? null;
+
+              const childFamily = spouse
+                ? [child, spouse]
+                : [child];
+
+              const familyChildren =
+                getChildrenOfFamily(childFamily);
+
+              /*
+               * Đánh dấu member đã render.
+               */
+              const nextRenderedIds = new Set(
+                renderedIds
               );
-
-              const nextRenderedIds = new Set(renderedIds);
 
               nextRenderedIds.add(child.id);
 
@@ -134,7 +186,9 @@ export default function FamilyTreeBranch({
                   key={child.id}
                   className="flex flex-col items-center"
                 >
-                  {/* Người con + vợ/chồng */}
+                  {/* =======================================
+                      CHILD + SPOUSE
+                     ======================================= */}
                   <div className="flex items-center justify-center gap-6">
                     <div className="relative">
                       <FamilyMemberCard
@@ -167,24 +221,28 @@ export default function FamilyTreeBranch({
                     )}
                   </div>
 
-                  {/* Con của cặp này */}
+                  {/* =======================================
+                      CHILDREN OF THIS FAMILY UNIT
+                     ======================================= */}
                   {familyChildren.length > 0 && (
                     <>
                       <div className="w-px h-10 bg-primary/30" />
 
                       <FamilyTreeBranch
-                        parents={
-                          spouse
-                            ? [child, spouse]
-                            : [child]
-                        }
+                        parents={childFamily}
                         children={familyChildren}
                         allMembers={allMembers}
                         childrenMap={childrenMap}
                         spouseMap={spouseMap}
-                        selectedMemberId={selectedMemberId}
-                        onMemberClick={onMemberClick}
-                        renderedIds={nextRenderedIds}
+                        selectedMemberId={
+                          selectedMemberId
+                        }
+                        onMemberClick={
+                          onMemberClick
+                        }
+                        renderedIds={
+                          nextRenderedIds
+                        }
                       />
                     </>
                   )}
