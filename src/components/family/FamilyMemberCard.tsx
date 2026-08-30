@@ -1,6 +1,16 @@
 import { Heart } from 'lucide-react';
 import React from 'react';
-import type { Member } from '../../types';
+
+interface Member {
+  id: string;
+  name: string;
+  birthDate: string;
+  hobbies: string[];
+  imageUrl: string;
+  imageAlt: string;
+  relation?: string;
+  shortBio?: string;
+}
 
 interface FamilyMemberCardProps {
   member: Member;
