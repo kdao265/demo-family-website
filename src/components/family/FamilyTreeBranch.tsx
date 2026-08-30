@@ -20,6 +20,8 @@ interface FamilyTreeBranchProps {
   selectedMemberId: string | null;
   onMemberClick: (memberId: string) => void;
   renderedIds: Set<string>;
+  collapsedFamilyIds: Set<string>;
+  onToggleCollapse: (memberIds: string[]) => void;
 }
 
 export default function FamilyTreeBranch({
@@ -31,10 +33,19 @@ export default function FamilyTreeBranch({
   selectedMemberId,
   onMemberClick,
   renderedIds,
+  collapsedFamilyIds,
+  onToggleCollapse,
 }: FamilyTreeBranchProps) {
   const memberMap = new Map(
     allMembers.map((member) => [member.id, member])
   );
+  const familyUnitId = [...parents]
+    .map((member) => member.id)
+    .sort()
+    .join('|');
+  
+  const isCollapsed =
+    collapsedFamilyIds.has(familyUnitId);
 
   /*
    * --------------------------------------------------
@@ -130,10 +141,30 @@ export default function FamilyTreeBranch({
         ))}
       </div>
 
+            {children.length > 0 && (
+              <button
+                type="button"
+                onClick={() =>
+                  onToggleCollapse(
+                    parents.map((parent) => parent.id)
+                  )
+                }
+                className="my-3 w-8 h-8 rounded-full bg-surface border border-primary/30 text-primary hover:bg-primary/10 transition-colors flex items-center justify-center text-lg font-semibold shadow-sm z-10"
+                aria-label={
+                  isCollapsed
+                    ? 'Mở rộng nhánh gia đình'
+                    : 'Thu gọn nhánh gia đình'
+                }
+              >
+                {isCollapsed ? '+' : '−'}
+              </button>
+            )}
+
       {/* =================================================
           CHILDREN
          ================================================= */}
-      {visibleChildren.length > 0 && (
+      {visibleChildren.length > 0 &&
+        !isCollapsed && (
         <>
           {/* Dọc từ family unit xuống */}
           <div className="w-px h-12 bg-primary/25" />
@@ -242,6 +273,12 @@ export default function FamilyTreeBranch({
                         }
                         renderedIds={
                           nextRenderedIds
+                        }
+                        collapsedFamilyIds={
+                          collapsedFamilyIds
+                        }
+                        onToggleCollapse={
+                          onToggleCollapse
                         }
                       />
                     </>
