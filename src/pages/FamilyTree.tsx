@@ -60,6 +60,8 @@ export default function FamilyTree() {
   const [zoom, setZoom] = useState(1);
   const [pan, setPan] = useState({ x: 0, y: 0 });
   const [isDragging, setIsDragging] = useState(false);
+  const [collapsedFamilyIds, setCollapsedFamilyIds] =
+    useState<Set<string>>(new Set());
   
   const dragStart = useRef({
     x: 0,
@@ -219,6 +221,26 @@ export default function FamilyTree() {
     setSelectedMemberId((current) =>
       current === memberId ? null : memberId
     );
+  }
+
+  function getFamilyUnitId(memberIds: string[]) {
+    return [...memberIds].sort().join('|');
+  }
+  
+  function toggleFamilyUnit(memberIds: string[]) {
+    const familyId = getFamilyUnitId(memberIds);
+  
+    setCollapsedFamilyIds((current) => {
+      const next = new Set(current);
+  
+      if (next.has(familyId)) {
+        next.delete(familyId);
+      } else {
+        next.add(familyId);
+      }
+  
+      return next;
+    });
   }
 
   if (loading) {
@@ -550,26 +572,17 @@ export default function FamilyTree() {
                                   parents={unit}
                                   children={children}
                                   allMembers={members}
-                                  childrenMap={
-                                    childrenMap
-                                  }
-                                  spouseMap={
-                                    spouseMap
-                                  }
-                                  selectedMemberId={
-                                    selectedMemberId
-                                  }
-                                  onMemberClick={
-                                    handleMemberClick
-                                  }
+                                  childrenMap={childrenMap}
+                                  spouseMap={spouseMap}
+                                  selectedMemberId={selectedMemberId}
+                                  onMemberClick={handleMemberClick}
                                   renderedIds={
                                     new Set(
-                                      unit.map(
-                                        (member) =>
-                                          member.id
-                                      )
+                                      unit.map((member) => member.id)
                                     )
                                   }
+                                  collapsedFamilyIds={collapsedFamilyIds}
+                                  onToggleCollapse={toggleFamilyUnit}
                                 />
                               );
                             }
