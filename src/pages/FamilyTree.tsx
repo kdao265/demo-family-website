@@ -478,7 +478,7 @@ export default function FamilyTree() {
             onPointerCancel={handlePointerUp}
           >
             {/* Hướng dẫn */}
-            <div className="absolute top-4 left-1/2 -translate-x-1/2 z-20 px-4 py-2 rounded-full bg-surface-container-lowest/90 backdrop-blur-sm border border-outline/10 text-xs text-on-surface-variant shadow-sm">
+            <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-20 px-4 py-2 rounded-full bg-surface-container-lowest/90 backdrop-blur-sm border border-outline/10 text-xs text-on-surface-variant shadow-sm">
               Kéo để di chuyển · Lăn chuột để phóng to
             </div>
       
