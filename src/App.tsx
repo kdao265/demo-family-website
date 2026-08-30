@@ -39,8 +39,7 @@ function AppContent() {
   const location = useLocation();
 
   const isAdminArea =
-    location.pathname.startsWith('/admin') &&
-    location.pathname !== '/admin/login';
+    location.pathname.startsWith('/admin');
 
   return (
     <div className="min-h-screen">
