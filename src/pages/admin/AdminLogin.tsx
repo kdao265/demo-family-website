@@ -29,7 +29,7 @@ export default function AdminLogin() {
   }
 
   return (
-    <div className="pt-[72px] min-h-screen bg-surface flex items-center justify-center px-margin-mobile md:px-margin-desktop">
+    <div className="min-h-screen bg-surface flex items-center justify-center px-margin-mobile md:px-margin-desktop">
       <div className="w-full max-w-md bg-surface-container-lowest rounded-3xl border border-outline/10 family-card-shadow p-8 md:p-10">
         <div className="text-center mb-8">
           <div className="w-14 h-14 rounded-full bg-primary/10 text-primary flex items-center justify-center mx-auto mb-5">
