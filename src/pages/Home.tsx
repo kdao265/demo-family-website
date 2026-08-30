@@ -498,33 +498,6 @@ export default function Home() {
                 );
               })
             )}
-              const layoutClass =
-                index === 0
-                  ? 'md:col-span-6 md:row-span-2 h-[420px]'
-                  : 'md:col-span-3 h-[200px]';
-
-              return (
-                <Link
-                  to="/moments"
-                  key={photo.id}
-                  className={`group relative rounded-2xl overflow-hidden ${layoutClass}`}
-                >
-                  <img
-                    src={photo.imageUrl}
-                    alt={photo.imageAlt}
-                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
-                  />
-
-                  <div className="absolute inset-0 bg-gradient-to-t from-on-surface/75 via-transparent to-transparent"></div>
-
-                  <div className="absolute left-5 right-5 bottom-5">
-                    <p className="text-on-primary font-label-md text-sm">
-                      {photo.title}
-                    </p>
-                  </div>
-                </Link>
-              );
-            })}
           </div>
         </div>
       </section>
