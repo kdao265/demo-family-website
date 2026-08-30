@@ -329,28 +329,6 @@ export default function FamilyTree() {
     ) {
       return;
     }
-
-    useEffect(() => {
-      if (
-        loading ||
-        members.length === 0
-      ) {
-        return;
-      }
-    
-      const frame = requestAnimationFrame(() => {
-        fitTreeToScreen();
-      });
-    
-      return () => {
-        cancelAnimationFrame(frame);
-      };
-    }, [
-      loading,
-      members.length,
-      relationships.length,
-      couples.length,
-    ]);
   
     const horizontalPadding = 80;
     const verticalPadding = 80;
@@ -383,6 +361,28 @@ export default function FamilyTree() {
     setZoom(nextZoom);
     setPan({ x: 0, y: 0 });
   }
+
+  useEffect(() => {
+    if (
+      loading ||
+      members.length === 0
+    ) {
+      return;
+    }
+  
+    const frame = requestAnimationFrame(() => {
+      fitTreeToScreen();
+    });
+  
+    return () => {
+      cancelAnimationFrame(frame);
+    };
+  }, [
+    loading,
+    members.length,
+    relationships.length,
+    couples.length,
+  ]);
   
   function handleWheel(
     event: React.WheelEvent<HTMLDivElement>
