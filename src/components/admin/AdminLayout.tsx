@@ -57,16 +57,41 @@ export default function AdminLayout() {
 
   const [mobileOpen, setMobileOpen] = useState(false);
   const [userEmail, setUserEmail] = useState('');
+  const [pendingGuestbook, setPendingGuestbook] =
+    useState(0);
 
   useEffect(() => {
     async function loadUser() {
       const {
         data: { user },
       } = await supabase.auth.getUser();
-
+  
       setUserEmail(user?.email ?? '');
+  
+      if (!user) {
+        return;
+      }
+  
+      const { count, error } = await supabase
+        .from('guestbook_messages')
+        .select('*', {
+          count: 'exact',
+          head: true,
+        })
+        .eq('is_approved', false);
+  
+      if (error) {
+        console.error(
+          'Load pending guestbook count error:',
+          error
+        );
+  
+        return;
+      }
+  
+      setPendingGuestbook(count ?? 0);
     }
-
+  
     loadUser();
   }, []);
 
@@ -208,7 +233,18 @@ export default function AdminLayout() {
                 >
                   <Icon className="w-5 h-5 shrink-0" />
 
-                  <span>{item.label}</span>
+                  <span className="flex-1">
+                    {item.label}
+                  </span>
+                  
+                  {item.path === '/admin/guestbook' &&
+                    pendingGuestbook > 0 && (
+                      <span className="min-w-5 h-5 px-1.5 rounded-full bg-primary text-on-primary text-[11px] font-semibold flex items-center justify-center">
+                        {pendingGuestbook > 99
+                          ? '99+'
+                          : pendingGuestbook}
+                      </span>
+                    )}
                 </NavLink>
               );
             })}
