@@ -503,54 +503,128 @@ export default function FamilyTree() {
                 ) : (
                   <div className="space-y-16">
                     {(() => {
-                      const rootMembers =
-                        getRootMembers();
-      
+                      const rootMembers = getRootMembers();
+                      
                       const rootIds = new Set(
-                        rootMembers.map(
-                          (member) => member.id
-                        )
+                        rootMembers.map((member) => member.id)
                       );
-      
-                      const processedRootIds =
-                        new Set<string>();
-      
-                      const rootUnits:
-                        DisplayMember[][] = [];
-      
+                      
+                      /*
+                       * --------------------------------------------------
+                       * Tìm các root member thực sự cần render.
+                       *
+                       * Một root có thể "kết nối" tới một root khác
+                       * thông qua:
+                       *
+                       * root
+                       *   ↓
+                       * con
+                       *   ↓
+                       * vợ/chồng
+                       *
+                       * Nếu đã có một root khác được kết nối theo cách đó,
+                       * root kia không được tạo thành một cây riêng.
+                       * --------------------------------------------------
+                       */
+                      
+                      const coveredRootIds = new Set<string>();
+                      
+                      function markConnectedRoots(startId: string) {
+                        const visited = new Set<string>();
+                        const stack = [startId];
+                      
+                        while (stack.length > 0) {
+                          const currentId = stack.pop();
+                      
+                          if (!currentId || visited.has(currentId)) {
+                            continue;
+                          }
+                      
+                          visited.add(currentId);
+                      
+                          /*
+                           * Nếu current là một root khác với start
+                           * thì root đó đã được kết nối vào cây của start.
+                           */
+                          if (
+                            currentId !== startId &&
+                            rootIds.has(currentId)
+                          ) {
+                            coveredRootIds.add(currentId);
+                          }
+                      
+                          /*
+                           * Đi xuống các thế hệ con.
+                           */
+                          const childIds =
+                            childrenMap.get(currentId) ?? [];
+                      
+                          for (const childId of childIds) {
+                            if (!visited.has(childId)) {
+                              stack.push(childId);
+                            }
+                          }
+                      
+                          /*
+                           * Đi qua quan hệ vợ/chồng.
+                           */
+                          const spouses =
+                            getSpouses(currentId);
+                      
+                          for (const spouse of spouses) {
+                            if (!visited.has(spouse.id)) {
+                              stack.push(spouse.id);
+                            }
+                          }
+                        }
+                      }
+                      
+                      /*
+                       * Mỗi root thử bao phủ các root khác
+                       * mà nó liên kết tới.
+                       */
                       for (const root of rootMembers) {
-                        if (
-                          processedRootIds.has(
-                            root.id
-                          )
-                        ) {
+                        if (coveredRootIds.has(root.id)) {
                           continue;
                         }
-      
-                        const spouses =
-                          getSpouses(root.id).filter(
-                            (spouse) =>
-                              rootIds.has(spouse.id)
-                          );
-      
+                      
+                        markConnectedRoots(root.id);
+                      }
+                      
+                      /*
+                       * Chỉ những root chưa bị root khác bao phủ
+                       * mới trở thành điểm bắt đầu của cây.
+                       */
+                      const actualRoots = rootMembers.filter(
+                        (root) => !coveredRootIds.has(root.id)
+                      );
+                      
+                      /*
+                       * --------------------------------------------------
+                       * Tạo family unit từ actual root.
+                       *
+                       * Root có spouse thì đưa spouse vào cùng unit,
+                       * kể cả spouse không phải root.
+                       * --------------------------------------------------
+                       */
+                      
+                      const rootUnits: DisplayMember[][] = [];
+                      
+                      for (const root of actualRoots) {
                         const unit = [root];
-      
+                      
+                        const spouses = getSpouses(root.id);
+                      
                         for (const spouse of spouses) {
                           if (
-                            !processedRootIds.has(
-                              spouse.id
+                            !unit.some(
+                              (member) => member.id === spouse.id
                             )
                           ) {
                             unit.push(spouse);
                           }
                         }
-      
-                        for (const member of unit) {
-                          processedRootIds.add(
-                            member.id
-                          );
-                        }
-      
+                      
                         rootUnits.push(unit);
                       }
       
