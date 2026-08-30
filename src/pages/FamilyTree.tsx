@@ -1,5 +1,10 @@
 import { Heart } from 'lucide-react';
-import React.useRef, { useEffect, useMemo, useState } from 'react';
+import React, {
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react';
 import FamilyMemberCard from '../components/family/FamilyMemberCard';
 import FamilyTreeBranch from '../components/family/FamilyTreeBranch';
 import { supabase } from '../lib/supabase';
@@ -56,12 +61,12 @@ export default function FamilyTree() {
   const [pan, setPan] = useState({ x: 0, y: 0 });
   const [isDragging, setIsDragging] = useState(false);
   
-  const dragStart = React.useRef({
+  const dragStart = useRef({
     x: 0,
     y: 0,
   });
   
-  const panStart = React.useRef({
+  const panStart = useRef({
     x: 0,
     y: 0,
   });
