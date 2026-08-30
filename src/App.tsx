@@ -14,6 +14,7 @@ import Families from './pages/admin/Families';
 import Members from './pages/admin/Members';
 import Relationships from './pages/admin/Relationships';
 import Moments from './pages/admin/Moments';
+import GuestbookAdmin from './pages/admin/Guestbook';
 
 export default function App() {
   return (
@@ -73,10 +74,18 @@ export default function App() {
                 </AdminGuard>
               }
             />
+
+            <Route
+              path="/admin/guestbook"
+              element={
+                <AdminGuard>
+                  <GuestbookAdmin />
+                </AdminGuard>
+              }
+            />
             
           </Routes>
         </main>
-
         <Footer />
       </div>
     </Router>
